@@ -1,0 +1,6 @@
+backend/settings.json
+backend/coffee_dial.db
+backend/__pycache__/
+*.pyc
+.env
+.DS_Store
