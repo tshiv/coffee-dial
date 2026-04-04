@@ -1,0 +1,197 @@
+{
+  "fellow_ode_gen1": {
+    "name": "Fellow Ode Gen 1",
+    "type": "electric",
+    "burr_type": "flat",
+    "burr_size_mm": 64,
+    "settings": {
+      "min": 1,
+      "max": 11,
+      "step": 1,
+      "unit": "setting"
+    },
+    "micron_map": [
+      [1, 250], [2, 350], [3, 450], [4, 550], [5, 650],
+      [6, 750], [7, 850], [8, 950], [9, 1050], [10, 1150], [11, 1250]
+    ],
+    "suitable_for": ["filter", "cold_brew"],
+    "notes": "Filter-only grinder. Stock burrs cannot grind fine enough for espresso."
+  },
+  "fellow_ode_gen2": {
+    "name": "Fellow Ode Gen 2",
+    "type": "electric",
+    "burr_type": "flat",
+    "burr_size_mm": 64,
+    "settings": {
+      "min": 1,
+      "max": 31,
+      "step": 1,
+      "unit": "setting"
+    },
+    "micron_map": [
+      [1, 250], [4, 300], [8, 400], [12, 500], [16, 600],
+      [20, 700], [24, 800], [27, 900], [31, 1000]
+    ],
+    "suitable_for": ["filter", "cold_brew"],
+    "notes": "Gen 2 Brew Burrs grind finer (250μm) with 31 settings for more precision."
+  },
+  "fellow_opus": {
+    "name": "Fellow Opus",
+    "type": "electric",
+    "burr_type": "conical",
+    "burr_size_mm": 40,
+    "settings": {
+      "min": 1,
+      "max": 41,
+      "step": 1,
+      "unit": "setting"
+    },
+    "micron_map": [
+      [1, 100], [5, 200], [10, 350], [15, 500], [20, 650],
+      [25, 750], [30, 850], [35, 1000], [41, 1200]
+    ],
+    "suitable_for": ["espresso", "filter", "french_press", "cold_brew"],
+    "notes": "All-purpose grinder. Inner ring provides micro-adjustments between main settings."
+  },
+  "baratza_encore": {
+    "name": "Baratza Encore",
+    "type": "electric",
+    "burr_type": "conical",
+    "burr_size_mm": 40,
+    "settings": {
+      "min": 1,
+      "max": 40,
+      "step": 1,
+      "unit": "setting"
+    },
+    "micron_map": [
+      [1, 250], [5, 350], [10, 500], [15, 650], [20, 800],
+      [25, 950], [30, 1100], [35, 1250], [40, 1400]
+    ],
+    "suitable_for": ["filter", "french_press", "cold_brew"],
+    "notes": "Industry standard home grinder. 40 macro settings."
+  },
+  "baratza_encore_esp": {
+    "name": "Baratza Encore ESP",
+    "type": "electric",
+    "burr_type": "conical",
+    "burr_size_mm": 40,
+    "settings": {
+      "min": 1,
+      "max": 40,
+      "step": 1,
+      "unit": "setting"
+    },
+    "micron_map": [
+      [1, 230], [5, 340], [10, 490], [15, 640], [20, 790],
+      [25, 940], [30, 1090], [35, 1230], [40, 1380]
+    ],
+    "suitable_for": ["espresso", "filter", "french_press", "cold_brew"],
+    "notes": "Espresso-capable Encore with finer grind range (230-1380μm)."
+  },
+  "baratza_virtuoso_plus": {
+    "name": "Baratza Virtuoso+",
+    "type": "electric",
+    "burr_type": "conical",
+    "burr_size_mm": 40,
+    "settings": {
+      "min": 1,
+      "max": 40,
+      "step": 1,
+      "unit": "setting"
+    },
+    "micron_map": [
+      [1, 250], [5, 350], [10, 500], [15, 650], [20, 800],
+      [25, 950], [30, 1100], [35, 1250], [40, 1400]
+    ],
+    "suitable_for": ["filter", "french_press", "cold_brew"],
+    "notes": "Upgraded Encore with digital timer and better burr consistency."
+  },
+  "comandante_c40": {
+    "name": "Comandante C40",
+    "type": "manual",
+    "burr_type": "conical",
+    "settings": {
+      "min": 0,
+      "max": 50,
+      "step": 1,
+      "unit": "clicks"
+    },
+    "micron_formula": {
+      "base_microns": 0,
+      "microns_per_step": 25
+    },
+    "suitable_for": ["espresso", "filter", "french_press", "cold_brew"],
+    "notes": "Premium hand grinder. ~25μm per click. Pour-over: 22-28 clicks, French press: 28-34 clicks."
+  },
+  "1zpresso_jx_pro": {
+    "name": "1Zpresso JX-Pro",
+    "type": "manual",
+    "burr_type": "conical",
+    "burr_size_mm": 48,
+    "settings": {
+      "min": 0,
+      "max": 200,
+      "step": 1,
+      "unit": "clicks"
+    },
+    "micron_formula": {
+      "base_microns": 0,
+      "microns_per_step": 12.5
+    },
+    "suitable_for": ["espresso", "filter", "french_press", "cold_brew"],
+    "notes": "40 clicks per rotation. Excellent for filter at 60-80 clicks."
+  },
+  "1zpresso_j_max": {
+    "name": "1Zpresso J-Max",
+    "type": "manual",
+    "burr_type": "conical",
+    "burr_size_mm": 48,
+    "settings": {
+      "min": 0,
+      "max": 400,
+      "step": 1,
+      "unit": "clicks"
+    },
+    "micron_formula": {
+      "base_microns": 0,
+      "microns_per_step": 8.8
+    },
+    "suitable_for": ["turkish", "espresso", "filter", "french_press", "cold_brew"],
+    "notes": "90 clicks per rotation, 8.8μm per click. Ultra-precise. Pour-over: ~270 clicks."
+  },
+  "timemore_c2": {
+    "name": "Timemore C2",
+    "type": "manual",
+    "burr_type": "conical",
+    "settings": {
+      "min": 0,
+      "max": 36,
+      "step": 1,
+      "unit": "clicks"
+    },
+    "micron_formula": {
+      "base_microns": 100,
+      "microns_per_step": 30
+    },
+    "suitable_for": ["filter", "french_press", "cold_brew"],
+    "notes": "Budget-friendly hand grinder. Pour-over: 14-18 clicks, French press: 20-24 clicks."
+  },
+  "timemore_c3": {
+    "name": "Timemore C3",
+    "type": "manual",
+    "burr_type": "conical",
+    "settings": {
+      "min": 0,
+      "max": 36,
+      "step": 1,
+      "unit": "clicks"
+    },
+    "micron_formula": {
+      "base_microns": 100,
+      "microns_per_step": 30
+    },
+    "suitable_for": ["filter", "french_press", "cold_brew"],
+    "notes": "Upgraded C2 with S2C burrs for better consistency."
+  }
+}

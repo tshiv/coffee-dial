@@ -1,20 +1,66 @@
-# ☕ Coffee Dial
+# Coffee Dial
 
-**AI-powered grind settings and brew profiles for the Fellow Ode Gen 1 + Aiden.**
+**Open source bag-to-cup brew assistant.** AI-powered grind settings and brew recipes for 11 grinders and 21 brewers.
 
-Built for households on a rotating coffee subscription (e.g. [Bottomless](https://www.bottomless.com)) who want dialed-in settings for every new bag without guesswork.
-
-![Coffee Dial Screenshot](docs/screenshot.png)
+Built for coffee snobs on rotating subscriptions (e.g. [Bottomless](https://www.bottomless.com)) who want dialed-in settings for every new bag without guesswork.
 
 ---
 
 ## What it does
 
 1. **Search or paste** your coffee bag info — coffee name, bag text, Bottomless description, anything
-2. **AI parses** roast level, origin, processing method, and flavor notes (OpenAI or Anthropic)
-3. **Recommends** a specific Ode Gen 1 grind setting (1–11) and a full Aiden brew profile
-4. **Optionally pushes** the profile directly to your Aiden via the Fellow API
-5. **You rate the cup** → app adjusts future recommendations based on your history
+2. **AI parses** roast level, origin, processing method, and flavor notes (Anthropic or OpenAI)
+3. **Pick your equipment** — grinder + brewer from the catalog
+4. **Tell it how much** — just ounces, the engine computes dose and ratio
+5. **Get a complete recipe** — grind setting for your specific grinder + method-specific brew instructions
+6. **Rate the cup** → app adjusts future recommendations based on your history
+
+---
+
+## Supported Equipment
+
+### Grinders
+
+| Grinder | Type | Settings |
+|---------|------|----------|
+| Fellow Ode Gen 1 | Electric | 1–11 |
+| Fellow Ode Gen 2 | Electric | 1–31 |
+| Fellow Opus | Electric | 1–41 |
+| Baratza Encore | Electric | 1–40 |
+| Baratza Encore ESP | Electric | 1–40 |
+| Baratza Virtuoso+ | Electric | 1–40 |
+| Comandante C40 | Manual | Clicks |
+| 1Zpresso JX-Pro | Manual | Clicks |
+| 1Zpresso J-Max | Manual | Clicks |
+| Timemore C2 | Manual | Clicks |
+| Timemore C3 | Manual | Clicks |
+
+### Brewers
+
+**Automatic:** Fellow Aiden, Breville Precision Brewer, Technivorm Moccamaster (KBGV, KBT), Ratio Six, Ratio Eight, OXO Brew 9-Cup, Bonavita Connoisseur
+
+**Manual:** Hario V60 (01/02/03), Chemex (3/6/8-cup), Kalita Wave (155/185), Fellow Stagg [X]/[XF], AeroPress, Clever Dripper, French Press
+
+---
+
+## How it works
+
+### The Micron Bridge
+
+Every grinder produces a particle size in microns. Every brewer has an ideal micron range. The recommendation engine:
+
+1. Determines a **target micron value** based on roast level + brew method (percolation vs immersion)
+2. Applies **offsets** for origin, process, batch size, and your brew history
+3. **Translates** the target to your grinder's specific setting via interpolation
+4. **Generates a recipe** appropriate for your brewer (step-by-step pour-over, steep time, Aiden profile, etc.)
+
+### Brew history learning
+
+After rating a few cups, the app adapts. If you consistently rate light Ethiopian coffees as too bitter, it nudges the grind coarser for your next one. Learning happens in micron-space, so feedback transfers even if you switch grinders.
+
+### Micron values are approximate
+
+Grind particle sizes are based on manufacturer specs and community measurements. They vary by burr wear, alignment, and bean hardness. **Please contribute corrections** — this is the primary area where community input will improve the tool.
 
 ---
 
@@ -23,7 +69,7 @@ Built for households on a rotating coffee subscription (e.g. [Bottomless](https:
 ### 1. Clone
 
 ```bash
-git clone https://github.com/coffee-dial/coffee-dial
+git clone https://github.com/tshiv/coffee-dial
 cd coffee-dial
 ```
 
@@ -35,21 +81,17 @@ pip install -r requirements.txt
 python app.py
 ```
 
-The backend runs at `http://localhost:8765`. It handles:
-- AI coffee parsing (Anthropic or OpenAI)
-- SQLite brew history persistence
-- Fellow Aiden profile push via [9b/fellow-aiden](https://github.com/9b/fellow-aiden)
+The backend runs at `http://localhost:8765`.
 
 ### 3. Frontend
 
-Open `frontend/index.html` in your browser. That's it — no build step.
+Open `frontend/index.html` in your browser. No build step.
 
 Or serve it:
 
 ```bash
 cd frontend
 python -m http.server 3000
-# → http://localhost:3000
 ```
 
 ### 4. Add your API key
@@ -66,63 +108,51 @@ All settings are stored in `backend/settings.json` (gitignored):
 {
   "ai_provider": "anthropic",
   "anthropic_key": "sk-ant-...",
-  "openai_key": "sk-...",
+  "temp_unit": "F",
   "fellow_email": "you@email.com",
   "fellow_password": "..."
 }
 ```
 
-The database lives at `backend/coffee_dial.db` (also gitignored).
+Temperature displays in Fahrenheit by default (changeable in Settings).
 
 ---
 
-## How recommendations work
+## Aiden Push
 
-### Ode Gen 1 grind settings (batch brew)
-
-| Roast        | Base setting | Temp   |
-|-------------|-------------|--------|
-| Light        | 4           | 96°C   |
-| Medium-Light | 5           | 94°C   |
-| Medium       | 6           | 93°C   |
-| Medium-Dark  | 7           | 91°C   |
-| Dark         | 8           | 89°C   |
-
-Adjustments applied on top of the base:
-
-- **Origin** — Ethiopian/Kenyan +1°C; Brazilian/Sumatran +0.5 grind, -2°C
-- **Process** — Washed +1°C; Natural/Honey +0.5 grind, -1°C; Anaerobic +1 grind, -1°C
-- **Batch size** — >22oz +0.5 grind, ≤10oz -0.5 grind
-- **Your history** — if 2+ similar brews rated bitter → +0.5 grind; bright/flat → -0.5 grind
-
-### Brew history learning
-
-After rating a few cups, the app adapts. If you consistently rate light Ethiopian coffees as too bitter, it'll nudge the grind setting coarser for your next one. The adjustment is averaged across similar brews (same roast level).
+For Fellow Aiden owners: the app can push brew profiles directly to your Aiden via the [9b/fellow-aiden](https://github.com/9b/fellow-aiden) library. Add your Fellow credentials in Settings.
 
 ---
 
-## Aiden push
+## Project Structure
 
-Uses the unofficial [9b/fellow-aiden](https://github.com/9b/fellow-aiden) Python library. The backend authenticates with your Fellow account and creates a profile with:
+```
+coffee-dial/
+  backend/
+    app.py                  # Flask routes
+    ai/
+      parsing.py            # AI provider integration
+    engine/
+      recommend.py          # Recommendation pipeline
+      grind.py              # Micron targeting + grinder translation
+      recipes.py            # Recipe builders per brew method
+      adjustments.py        # Origin/process/volume offsets
+    equipment/
+      grinders.json         # Grinder catalog (add yours here!)
+      brewers.json          # Brewer catalog
+      loader.py             # Equipment loading
+  frontend/
+    index.html              # Single-file frontend (no build step)
+```
 
-- Temperature
-- Bloom duration + ratio
-- Pulse count + interval
-- Brew ratio
+## Contributing
 
-Profiles appear in your Fellow app immediately.
+The easiest way to contribute is improving the equipment data:
 
----
+- **`backend/equipment/grinders.json`** — Add a grinder or correct micron maps
+- **`backend/equipment/brewers.json`** — Add a brewer or adjust grind ranges
 
-## Brew presets
-
-Default presets (editable in Settings):
-
-| Name         | Volume  | Dose  |
-|-------------|---------|-------|
-| Solo (12.5oz)| 12.5 oz | 22g   |
-| Partner (14oz)| 14 oz   | 24.5g |
-| Batch (30oz) | 30 oz   | 52g   |
+Adding a new grinder is just a JSON entry — no Python code changes needed. Adding a new brewer that uses an existing recipe type (pour-over, immersion, etc.) is also just JSON.
 
 ---
 
@@ -137,7 +167,7 @@ Default presets (editable in Settings):
 
 ## Related projects
 
-- [9b/fellow-aiden](https://github.com/9b/fellow-aiden) — Python library + Brew Studio (Streamlit UI with AI)
+- [9b/fellow-aiden](https://github.com/9b/fellow-aiden) — Python library + Brew Studio
 - [Beanconqueror](https://github.com/graphefruit/Beanconqueror) — open source coffee tracking mobile app
 - [brewshare.coffee](https://brewshare.coffee) — community Aiden profile browser
 

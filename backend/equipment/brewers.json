@@ -1,0 +1,323 @@
+{
+  "fellow_aiden": {
+    "name": "Fellow Aiden",
+    "type": "automatic",
+    "method": "drip",
+    "extraction_type": "percolation",
+    "has_api": true,
+    "api_module": "fellow_aiden",
+    "recipe_type": "aiden_profile",
+    "parameters": {
+      "temp_c": {"min": 85, "max": 99, "default": 94, "controllable": true},
+      "bloom_dur": {"min": 0, "max": 60, "default": 40, "controllable": true, "unit": "seconds"},
+      "bloom_ratio": {"min": 1, "max": 4, "default": 2.5, "controllable": true},
+      "ratio": {"min": 12, "max": 20, "default": 16, "controllable": true},
+      "pulses": {"min": 1, "max": 6, "default": 2, "controllable": true},
+      "pulse_int": {"min": 10, "max": 60, "default": 25, "controllable": true, "unit": "seconds"}
+    },
+    "capacity_oz": 40,
+    "target_grind_microns": {"min": 500, "max": 1000}
+  },
+  "hario_v60_01": {
+    "name": "Hario V60 01",
+    "type": "manual",
+    "method": "pour_over",
+    "extraction_type": "percolation",
+    "has_api": false,
+    "recipe_type": "pour_over_steps",
+    "parameters": {
+      "temp_c": {"min": 85, "max": 100, "default": 95, "controllable": true},
+      "ratio": {"min": 14, "max": 18, "default": 16, "controllable": true}
+    },
+    "capacity_oz": 10,
+    "target_grind_microns": {"min": 400, "max": 650},
+    "notes": "Single cup dripper. Spiral ridges promote airflow and faster drawdown."
+  },
+  "hario_v60_02": {
+    "name": "Hario V60 02",
+    "type": "manual",
+    "method": "pour_over",
+    "extraction_type": "percolation",
+    "has_api": false,
+    "recipe_type": "pour_over_steps",
+    "parameters": {
+      "temp_c": {"min": 85, "max": 100, "default": 95, "controllable": true},
+      "ratio": {"min": 14, "max": 18, "default": 16, "controllable": true}
+    },
+    "capacity_oz": 20,
+    "target_grind_microns": {"min": 400, "max": 700},
+    "notes": "Most popular size. Good for 1-3 cups."
+  },
+  "hario_v60_03": {
+    "name": "Hario V60 03",
+    "type": "manual",
+    "method": "pour_over",
+    "extraction_type": "percolation",
+    "has_api": false,
+    "recipe_type": "pour_over_steps",
+    "parameters": {
+      "temp_c": {"min": 85, "max": 100, "default": 95, "controllable": true},
+      "ratio": {"min": 14, "max": 18, "default": 16, "controllable": true}
+    },
+    "capacity_oz": 30,
+    "target_grind_microns": {"min": 450, "max": 750},
+    "notes": "Large batch size. Requires coarser grind than 01/02 for proper flow."
+  },
+  "chemex_3cup": {
+    "name": "Chemex 3-Cup",
+    "type": "manual",
+    "method": "pour_over",
+    "extraction_type": "percolation",
+    "has_api": false,
+    "recipe_type": "pour_over_steps",
+    "parameters": {
+      "temp_c": {"min": 90, "max": 100, "default": 96, "controllable": true},
+      "ratio": {"min": 14, "max": 17, "default": 15.5, "controllable": true}
+    },
+    "capacity_oz": 15,
+    "target_grind_microns": {"min": 500, "max": 750},
+    "notes": "Thick bonded filters produce a clean, tea-like cup. Grind slightly coarser than V60."
+  },
+  "chemex_6cup": {
+    "name": "Chemex 6-Cup",
+    "type": "manual",
+    "method": "pour_over",
+    "extraction_type": "percolation",
+    "has_api": false,
+    "recipe_type": "pour_over_steps",
+    "parameters": {
+      "temp_c": {"min": 90, "max": 100, "default": 96, "controllable": true},
+      "ratio": {"min": 14, "max": 17, "default": 15.5, "controllable": true}
+    },
+    "capacity_oz": 30,
+    "target_grind_microns": {"min": 550, "max": 800},
+    "notes": "Most popular Chemex size. Thick filters absorb more oils for a cleaner cup."
+  },
+  "chemex_8cup": {
+    "name": "Chemex 8-Cup",
+    "type": "manual",
+    "method": "pour_over",
+    "extraction_type": "percolation",
+    "has_api": false,
+    "recipe_type": "pour_over_steps",
+    "parameters": {
+      "temp_c": {"min": 90, "max": 100, "default": 96, "controllable": true},
+      "ratio": {"min": 14, "max": 17, "default": 15.5, "controllable": true}
+    },
+    "capacity_oz": 40,
+    "target_grind_microns": {"min": 550, "max": 800}
+  },
+  "kalita_wave_155": {
+    "name": "Kalita Wave 155",
+    "type": "manual",
+    "method": "pour_over",
+    "extraction_type": "percolation",
+    "has_api": false,
+    "recipe_type": "pour_over_steps",
+    "parameters": {
+      "temp_c": {"min": 88, "max": 100, "default": 95, "controllable": true},
+      "ratio": {"min": 14, "max": 17, "default": 16, "controllable": true}
+    },
+    "capacity_oz": 10,
+    "target_grind_microns": {"min": 450, "max": 700},
+    "notes": "Flat-bottom dripper. Three drain holes for even extraction. Very forgiving."
+  },
+  "kalita_wave_185": {
+    "name": "Kalita Wave 185",
+    "type": "manual",
+    "method": "pour_over",
+    "extraction_type": "percolation",
+    "has_api": false,
+    "recipe_type": "pour_over_steps",
+    "parameters": {
+      "temp_c": {"min": 88, "max": 100, "default": 95, "controllable": true},
+      "ratio": {"min": 14, "max": 17, "default": 16, "controllable": true}
+    },
+    "capacity_oz": 20,
+    "target_grind_microns": {"min": 450, "max": 750},
+    "notes": "Larger Wave. Flat-bottom with wave filters for consistent, balanced cups."
+  },
+  "fellow_stagg_x": {
+    "name": "Fellow Stagg [X] Dripper",
+    "type": "manual",
+    "method": "pour_over",
+    "extraction_type": "percolation",
+    "has_api": false,
+    "recipe_type": "pour_over_steps",
+    "parameters": {
+      "temp_c": {"min": 88, "max": 100, "default": 95, "controllable": true},
+      "ratio": {"min": 14, "max": 17, "default": 16, "controllable": true}
+    },
+    "capacity_oz": 10,
+    "target_grind_microns": {"min": 450, "max": 700},
+    "notes": "Flat-bottom with steep walls. Ratio-based fill lines. Designed for single cups."
+  },
+  "fellow_stagg_xf": {
+    "name": "Fellow Stagg [XF] Dripper",
+    "type": "manual",
+    "method": "pour_over",
+    "extraction_type": "percolation",
+    "has_api": false,
+    "recipe_type": "pour_over_steps",
+    "parameters": {
+      "temp_c": {"min": 88, "max": 100, "default": 95, "controllable": true},
+      "ratio": {"min": 14, "max": 17, "default": 16, "controllable": true}
+    },
+    "capacity_oz": 20,
+    "target_grind_microns": {"min": 450, "max": 700},
+    "notes": "Larger version of the Stagg [X]. Good for 2-3 cups."
+  },
+  "aeropress": {
+    "name": "AeroPress",
+    "type": "manual",
+    "method": "aeropress",
+    "extraction_type": "immersion",
+    "has_api": false,
+    "recipe_type": "aeropress_steps",
+    "parameters": {
+      "temp_c": {"min": 75, "max": 100, "default": 90, "controllable": true},
+      "ratio": {"min": 10, "max": 18, "default": 14, "controllable": true},
+      "steep_time": {"min": 30, "max": 240, "default": 90, "controllable": true, "unit": "seconds"}
+    },
+    "capacity_oz": 10,
+    "target_grind_microns": {"min": 300, "max": 600},
+    "notes": "Extremely versatile. Standard and inverted methods. Lower temp for lighter roasts."
+  },
+  "clever_dripper": {
+    "name": "Clever Dripper",
+    "type": "manual",
+    "method": "immersion",
+    "extraction_type": "immersion",
+    "has_api": false,
+    "recipe_type": "immersion_steps",
+    "parameters": {
+      "temp_c": {"min": 88, "max": 100, "default": 95, "controllable": true},
+      "ratio": {"min": 14, "max": 17, "default": 15.5, "controllable": true},
+      "steep_time": {"min": 120, "max": 300, "default": 210, "controllable": true, "unit": "seconds"}
+    },
+    "capacity_oz": 18,
+    "target_grind_microns": {"min": 500, "max": 800},
+    "notes": "Immersion brewer with paper filter. Combines French press body with pour-over clarity."
+  },
+  "french_press": {
+    "name": "French Press",
+    "type": "manual",
+    "method": "immersion",
+    "extraction_type": "immersion",
+    "has_api": false,
+    "recipe_type": "immersion_steps",
+    "parameters": {
+      "temp_c": {"min": 90, "max": 100, "default": 96, "controllable": true},
+      "ratio": {"min": 13, "max": 17, "default": 15, "controllable": true},
+      "steep_time": {"min": 180, "max": 300, "default": 240, "controllable": true, "unit": "seconds"}
+    },
+    "capacity_oz": 34,
+    "target_grind_microns": {"min": 800, "max": 1200},
+    "notes": "Coarse grind, full body, more oils. 4 minute steep is standard."
+  },
+  "moccamaster_kbgv": {
+    "name": "Technivorm Moccamaster KBGV Select",
+    "type": "automatic",
+    "method": "drip",
+    "extraction_type": "percolation",
+    "has_api": false,
+    "recipe_type": "simple_drip",
+    "parameters": {
+      "temp_c": {"fixed": 96, "controllable": false},
+      "hotplate": {"options": ["off", "low", "high"], "controllable": true}
+    },
+    "capacity_oz": 40,
+    "target_grind_microns": {"min": 600, "max": 900},
+    "notes": "Half/full batch switch. Copper boiler heats water to ~96°C. SCA certified."
+  },
+  "moccamaster_kbt": {
+    "name": "Technivorm Moccamaster KBT",
+    "type": "automatic",
+    "method": "drip",
+    "extraction_type": "percolation",
+    "has_api": false,
+    "recipe_type": "simple_drip",
+    "parameters": {
+      "temp_c": {"fixed": 96, "controllable": false},
+      "drip_stop": {"controllable": true, "note": "Manual brew basket stop for flow control"}
+    },
+    "capacity_oz": 40,
+    "target_grind_microns": {"min": 600, "max": 900},
+    "notes": "Thermal carafe model with manual drip-stop. SCA certified."
+  },
+  "breville_precision": {
+    "name": "Breville Precision Brewer",
+    "type": "automatic",
+    "method": "drip",
+    "extraction_type": "percolation",
+    "has_api": false,
+    "recipe_type": "precision_drip",
+    "parameters": {
+      "temp_c": {"min": 85, "max": 100, "default": 94, "controllable": true},
+      "bloom_dur": {"min": 0, "max": 60, "default": 30, "controllable": true, "unit": "seconds"},
+      "flow_rate": {"options": ["fast", "medium", "slow"], "default": "medium", "controllable": true}
+    },
+    "capacity_oz": 60,
+    "target_grind_microns": {"min": 500, "max": 950},
+    "notes": "6 brew modes including Gold Cup (SCA), My Brew for full customization. Temp + bloom control."
+  },
+  "ratio_six": {
+    "name": "Ratio Six",
+    "type": "automatic",
+    "method": "drip",
+    "extraction_type": "percolation",
+    "has_api": false,
+    "recipe_type": "simple_drip",
+    "parameters": {
+      "temp_c": {"fixed": 95, "controllable": false},
+      "bloom": {"fixed": true, "controllable": false, "note": "Built-in bloom cycle"}
+    },
+    "capacity_oz": 40,
+    "target_grind_microns": {"min": 600, "max": 900},
+    "notes": "One-button simplicity with SCA-certified brew quality. Built-in bloom cycle."
+  },
+  "ratio_eight": {
+    "name": "Ratio Eight",
+    "type": "automatic",
+    "method": "drip",
+    "extraction_type": "percolation",
+    "has_api": false,
+    "recipe_type": "simple_drip",
+    "parameters": {
+      "temp_c": {"fixed": 95, "controllable": false},
+      "bloom": {"fixed": true, "controllable": false, "note": "Built-in bloom cycle"}
+    },
+    "capacity_oz": 40,
+    "target_grind_microns": {"min": 600, "max": 900},
+    "notes": "Premium design with die-cast aluminum. Same SCA-certified brewing as Ratio Six."
+  },
+  "oxo_brew_9cup": {
+    "name": "OXO Brew 9-Cup",
+    "type": "automatic",
+    "method": "drip",
+    "extraction_type": "percolation",
+    "has_api": false,
+    "recipe_type": "simple_drip",
+    "parameters": {
+      "temp_c": {"fixed": 95, "controllable": false}
+    },
+    "capacity_oz": 36,
+    "target_grind_microns": {"min": 600, "max": 900},
+    "notes": "SCA certified. Rainmaker showerhead for even saturation."
+  },
+  "bonavita_connoisseur": {
+    "name": "Bonavita Connoisseur",
+    "type": "automatic",
+    "method": "drip",
+    "extraction_type": "percolation",
+    "has_api": false,
+    "recipe_type": "simple_drip",
+    "parameters": {
+      "temp_c": {"fixed": 95, "controllable": false},
+      "pre_infusion": {"fixed": true, "controllable": false, "note": "Optional pre-infusion mode"}
+    },
+    "capacity_oz": 40,
+    "target_grind_microns": {"min": 600, "max": 900},
+    "notes": "SCA certified. Optional pre-infusion mode. Wide showerhead."
+  }
+}

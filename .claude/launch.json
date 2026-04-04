@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Coffee Dial",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["app.py"],
+      "port": 8765,
+      "cwd": "backend"
+    }
+  ]
+}
