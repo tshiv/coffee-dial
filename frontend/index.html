@@ -966,7 +966,7 @@ function renderCommunityRecipeCard(recipe) {
   var useBtn = document.createElement('button');
   useBtn.className = 'use-recipe-btn';
   useBtn.textContent = 'Use This Recipe';
-  useBtn.onclick = function() { useCommunityRecipe(recipe); };
+  useBtn.onclick = function(e) { useCommunityRecipe(recipe, e); };
   actions.appendChild(useBtn);
 
   if (recipe.source_url) {
@@ -992,10 +992,10 @@ function renderCommunityRecipeCard(recipe) {
   return card;
 }
 
-function useCommunityRecipe(recipe) {
+function useCommunityRecipe(recipe, e) {
   // Highlight the selected card
   document.querySelectorAll('.community-card').forEach(function(c) { c.classList.remove('active-recipe'); });
-  event.target.closest('.community-card').classList.add('active-recipe');
+  e.target.closest('.community-card').classList.add('active-recipe');
 
   // Update the main recommendation display with community recipe data
   if (recipe.water_temp_c) {

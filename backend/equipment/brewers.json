@@ -187,7 +187,7 @@
     "name": "Clever Dripper",
     "type": "manual",
     "method": "immersion",
-    "extraction_type": "immersion_fine",
+    "extraction_type": "immersion_filtered",
     "has_api": false,
     "recipe_type": "immersion_steps",
     "parameters": {
