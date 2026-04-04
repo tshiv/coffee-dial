@@ -94,9 +94,57 @@ def init_db():
                 equipment_type TEXT NOT NULL,
                 equipment_id   TEXT NOT NULL,
                 is_default     INTEGER DEFAULT 0,
-                added_at       INTEGER NOT NULL
+                added_at       INTEGER NOT NULL,
+                UNIQUE(equipment_type, equipment_id)
             );
         """)
+
+        # Migrate legacy schemas from pre-multi-equipment versions
+        _migrate_brews(conn)
+        _migrate_presets(conn)
+
+
+def _get_columns(conn, table):
+    """Return set of column names for a table."""
+    cursor = conn.execute(f"PRAGMA table_info({table})")
+    return {row[1] for row in cursor.fetchall()}
+
+
+def _migrate_brews(conn):
+    """Add new columns to brews table if upgrading from old schema."""
+    cols = _get_columns(conn, "brews")
+    new_columns = {
+        "grinder_id": "TEXT",
+        "brewer_id": "TEXT",
+        "grinder_setting_display": "TEXT",
+        "target_microns": "REAL",
+        "dose_g": "REAL",
+        "water_g": "REAL",
+        "recipe_json": "TEXT",
+    }
+    for col, col_type in new_columns.items():
+        if col not in cols:
+            conn.execute(f"ALTER TABLE brews ADD COLUMN {col} {col_type}")
+
+
+def _migrate_presets(conn):
+    """Handle legacy presets table that had a NOT NULL grams column."""
+    cols = _get_columns(conn, "presets")
+    if "grams" in cols:
+        # SQLite can't drop columns in older versions, so recreate the table
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS presets_new (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                name        TEXT NOT NULL UNIQUE,
+                oz          REAL NOT NULL,
+                sort_order  INTEGER DEFAULT 0
+            );
+            INSERT OR IGNORE INTO presets_new (id, name, oz, sort_order)
+                SELECT id, name, oz, sort_order FROM presets;
+            DROP TABLE presets;
+            ALTER TABLE presets_new RENAME TO presets;
+        """)
+
 
 init_db()
 
