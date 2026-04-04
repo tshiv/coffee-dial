@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Coffee Dial — Fellow Ode Gen 1 + Aiden</title>
+<title>Coffee Dial</title>
 <style>
   :root {
     --bg: #1a1612;
@@ -77,7 +77,6 @@
   .section { display: none; }
   .section.active { display: block; }
 
-  /* Cards */
   .card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 20px; margin-bottom: 16px;
@@ -88,7 +87,6 @@
     text-transform: uppercase; color: var(--text3); margin-bottom: 14px;
   }
 
-  /* Forms */
   label { display: block; font-size: 13px; color: var(--text2); margin-bottom: 6px; }
 
   textarea, select, input[type="text"], input[type="number"], input[type="password"] {
@@ -104,9 +102,7 @@
 
   .field { margin-top: 12px; }
   .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
-  .field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px; }
 
-  /* Buttons */
   .btn {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 10px 18px; border-radius: var(--radius-sm); border: none;
@@ -123,11 +119,7 @@
   .btn-primary:hover:not(:disabled) { background: var(--accent2); }
   .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 
-  .btn-secondary {
-    background: var(--surface2); color: var(--text);
-    border: 1px solid var(--border);
-  }
-
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
   .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
   .btn-sm { padding: 6px 12px; font-size: 12px; }
   .btn-ghost { background: none; border: 1px solid var(--border); color: var(--text2); }
@@ -135,7 +127,6 @@
   .btn-danger { background: #c86a5a22; border: 1px solid #c86a5a44; color: var(--red); }
   .btn-danger:hover { background: #c86a5a33; }
 
-  /* Coffee Input Section */
   .input-mode-tabs {
     display: flex; gap: 4px; margin-bottom: 14px;
     background: var(--bg); border-radius: var(--radius-sm);
@@ -145,23 +136,16 @@
   .input-mode-tab {
     flex: 1; padding: 7px 10px; background: none; border: none;
     cursor: pointer; border-radius: 6px; color: var(--text2);
-    font-size: 13px; font-weight: 500; transition: all 0.15s;
-    font-family: inherit;
+    font-size: 13px; font-weight: 500; transition: all 0.15s; font-family: inherit;
   }
 
   .input-mode-tab.active { background: var(--surface); color: var(--text); }
-
   .input-panel { display: none; }
   .input-panel.active { display: block; }
 
-  /* Search bar */
-  .search-row {
-    display: flex; gap: 8px;
-  }
-
+  .search-row { display: flex; gap: 8px; }
   .search-row input { flex: 1; }
 
-  /* AI parsing status */
   .ai-status {
     display: none; align-items: center; gap: 8px;
     font-size: 13px; color: var(--text2); padding: 10px 14px;
@@ -173,224 +157,111 @@
   .spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* Detected coffee card */
   .detected-coffee {
     display: none; background: var(--surface2); border: 1px solid var(--border);
     border-radius: var(--radius-sm); padding: 14px; margin-top: 10px;
   }
-
   .detected-coffee.visible { display: block; }
   .detected-coffee .dc-name { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
   .detected-coffee .dc-meta { font-size: 13px; color: var(--text2); margin-bottom: 10px; line-height: 1.6; }
   .detected-coffee .dc-reasoning { font-size: 12px; color: var(--text3); font-style: italic; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px; }
 
-  .confidence-badge {
-    display: inline-block; font-size: 11px; padding: 2px 8px;
-    border-radius: 20px; font-weight: 600; margin-left: 8px;
-    vertical-align: middle;
-  }
-
+  .confidence-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 600; margin-left: 8px; vertical-align: middle; }
   .confidence-high   { background: #6ab87a15; color: var(--green); border: 1px solid #6ab87a44; }
   .confidence-medium { background: #d4a84b15; color: var(--yellow); border: 1px solid #d4a84b44; }
-  .confidence-low    { background: #c86a5a15; color: var(--red);    border: 1px solid #c86a5a44; }
+  .confidence-low    { background: #c86a5a15; color: var(--red); border: 1px solid #c86a5a44; }
 
   .tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+  .tag { padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); }
+  .tag.light   { border-color: #6ab87a44; color: var(--green); background: #6ab87a11; }
+  .tag.medium  { border-color: #d4a84b44; color: var(--yellow); background: #d4a84b11; }
+  .tag.dark    { border-color: #c86a5a44; color: var(--red); background: #c86a5a11; }
+  .tag.origin  { border-color: #c8854a44; color: var(--accent); background: #c8854a11; }
+  .tag.process { border-color: #7a8abf44; color: var(--blue); background: #7a8abf11; }
 
-  .tag {
-    padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;
-    background: var(--surface2); border: 1px solid var(--border); color: var(--text2);
-  }
-
-  .tag.light      { border-color: #6ab87a44; color: var(--green);  background: #6ab87a11; }
-  .tag.medium     { border-color: #d4a84b44; color: var(--yellow); background: #d4a84b11; }
-  .tag.dark       { border-color: #c86a5a44; color: var(--red);    background: #c86a5a11; }
-  .tag.origin     { border-color: #c8854a44; color: var(--accent); background: #c8854a11; }
-  .tag.process    { border-color: #7a8abf44; color: var(--blue);   background: #7a8abf11; }
-
-  /* Brew Size Section */
+  .eq-select-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .preset-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-
-  .preset-chip {
-    padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
-    background: var(--surface2); border: 1px solid var(--border); color: var(--text2);
-    cursor: pointer; transition: all 0.15s;
-  }
-
+  .preset-chip { padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); cursor: pointer; transition: all 0.15s; }
   .preset-chip:hover { border-color: var(--accent); color: var(--text); }
   .preset-chip.selected { background: #c8854a20; border-color: var(--accent); color: var(--accent); }
-  .preset-chip.add-btn { color: var(--text3); border-style: dashed; }
 
-  .brew-inputs { display: flex; gap: 10px; align-items: flex-end; }
-  .brew-inputs .field { flex: 1; margin-top: 0; }
-  .brew-inputs label { margin-bottom: 5px; }
-
-  /* Results */
   .result-hidden { display: none; }
-
   .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-
-  .result-card {
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 16px; text-align: center;
-  }
-
-  .result-card .big-num {
-    font-size: 52px; font-weight: 800; color: var(--accent);
-    line-height: 1; margin: 8px 0 4px; letter-spacing: -2px;
-  }
-
-  .result-card .label {
-    font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px;
-    color: var(--text3); font-weight: 600;
-  }
-
+  .result-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
+  .result-card .big-num { font-size: 52px; font-weight: 800; color: var(--accent); line-height: 1; margin: 8px 0 4px; letter-spacing: -2px; }
+  .result-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); font-weight: 600; }
   .result-card .sublabel { font-size: 12px; color: var(--text2); margin-top: 4px; }
 
   .profile-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-
-  .profile-item {
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: var(--radius-sm); padding: 12px; text-align: center;
-  }
-
+  .profile-item { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; text-align: center; }
   .profile-item .val { font-size: 20px; font-weight: 700; color: var(--text); margin: 4px 0 2px; }
   .profile-item .lbl { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; }
 
-  .rationale {
-    background: var(--surface2); border-left: 3px solid var(--accent);
-    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-    padding: 12px 14px; font-size: 13px; color: var(--text2);
-    line-height: 1.6; margin-bottom: 16px;
-  }
+  .rationale { background: var(--surface2); border-left: 3px solid var(--accent); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 12px 14px; font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 16px; }
+  .adjust-note { font-size: 12px; color: var(--yellow); background: #d4a84b11; border: 1px solid #d4a84b33; border-radius: var(--radius-sm); padding: 8px 12px; margin-top: 10px; }
 
-  .adjust-note {
-    font-size: 12px; color: var(--yellow); background: #d4a84b11;
-    border: 1px solid #d4a84b33; border-radius: var(--radius-sm);
-    padding: 8px 12px; margin-top: 10px;
-  }
+  .recipe-steps { list-style: none; padding: 0; }
+  .recipe-step { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .recipe-step:last-child { border-bottom: none; }
+  .step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #1a1612; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .step-body { flex: 1; }
+  .step-action { font-size: 13px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+  .step-note { font-size: 14px; color: var(--text); line-height: 1.5; }
+  .step-detail { font-size: 12px; color: var(--text2); margin-top: 2px; }
 
-  /* Push to Aiden */
-  .push-status {
-    display: none; font-size: 13px; padding: 10px 14px;
-    border-radius: var(--radius-sm); margin-bottom: 14px;
-  }
-
+  .push-status { display: none; font-size: 13px; padding: 10px 14px; border-radius: var(--radius-sm); margin-bottom: 14px; }
   .push-status.loading { display: flex; gap: 8px; align-items: center; background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
   .push-status.success { display: block; background: #6ab87a22; color: var(--green); border: 1px solid #6ab87a44; }
-  .push-status.error   { display: block; background: #c86a5a22; color: var(--red);   border: 1px solid #c86a5a44; }
+  .push-status.error   { display: block; background: #c86a5a22; color: var(--red); border: 1px solid #c86a5a44; }
 
-  /* Rating */
   .rating-row { display: flex; gap: 8px; flex-wrap: wrap; }
-
-  .rating-btn {
-    flex: 1; min-width: 80px; padding: 10px 8px;
-    border-radius: var(--radius-sm); border: 1px solid var(--border);
-    background: var(--surface2); color: var(--text2); font-size: 13px;
-    font-weight: 500; cursor: pointer; text-align: center; transition: all 0.15s;
-    font-family: inherit;
-  }
-
+  .rating-btn { flex: 1; min-width: 80px; padding: 10px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 13px; font-weight: 500; cursor: pointer; text-align: center; transition: all 0.15s; font-family: inherit; }
   .rating-btn:hover { border-color: var(--accent); color: var(--text); }
   .rating-btn.selected { border-color: var(--accent); color: var(--accent); background: #c8854a15; }
-  .rating-btn .emoji { font-size: 20px; display: block; margin-bottom: 4px; }
 
-  /* History */
-  .history-empty {
-    text-align: center; padding: 48px 20px; color: var(--text3); font-size: 14px;
-  }
-
-  .brew-entry {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 16px; margin-bottom: 10px;
-    display: flex; gap: 14px; align-items: flex-start;
-    transition: border-color 0.15s;
-  }
-
-  .brew-entry:hover { border-color: var(--border); }
-
+  .history-empty { text-align: center; padding: 48px 20px; color: var(--text3); font-size: 14px; }
+  .brew-entry { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; display: flex; gap: 14px; align-items: flex-start; }
   .brew-date { font-size: 11px; color: var(--text3); white-space: nowrap; padding-top: 3px; min-width: 54px; }
   .brew-main { flex: 1; min-width: 0; }
   .brew-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .brew-meta { font-size: 12px; color: var(--text2); line-height: 1.6; }
-
   .brew-chips { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 7px; }
+  .brew-chip { font-size: 11px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; color: var(--text2); }
+  .brew-rating { font-size: 13px; padding: 4px 8px; border-radius: 4px; flex-shrink: 0; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); }
 
-  .brew-chip {
-    font-size: 11px; background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 4px; padding: 2px 8px; color: var(--text2);
-  }
-
-  .brew-rating { font-size: 22px; padding-top: 1px; flex-shrink: 0; }
-
-  /* Settings */
-  .settings-row {
-    display: flex; align-items: flex-start; justify-content: space-between;
-    padding: 14px 0; border-bottom: 1px solid var(--border); gap: 12px;
-  }
-
+  .settings-row { display: flex; align-items: flex-start; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); gap: 12px; }
   .settings-row:last-child { border-bottom: none; }
   .settings-label { font-size: 14px; }
   .settings-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
-
-  .cred-status {
-    font-size: 12px; padding: 4px 10px; border-radius: 20px;
-    white-space: nowrap; flex-shrink: 0;
-  }
-
+  .cred-status { font-size: 12px; padding: 4px 10px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
   .cred-status.ok { color: var(--green); background: #6ab87a15; border: 1px solid #6ab87a44; }
   .cred-status.missing { color: var(--text3); background: var(--surface2); border: 1px solid var(--border); }
 
-  /* Presets manager */
-  .preset-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 0; border-bottom: 1px solid var(--border);
-  }
-
+  .preset-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
   .preset-row:last-child { border-bottom: none; }
   .preset-row .preset-name { flex: 1; font-size: 14px; }
   .preset-row .preset-meta { font-size: 13px; color: var(--text2); }
 
-  /* Modal */
-  .modal-overlay {
-    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75);
-    z-index: 100; align-items: center; justify-content: center; padding: 20px;
-  }
-
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
   .modal-overlay.open { display: flex; }
-
-  .modal {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 24px; width: 100%; max-width: 420px;
-  }
-
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 420px; }
   .modal h3 { font-size: 18px; margin-bottom: 8px; }
   .modal p { font-size: 13px; color: var(--text2); margin-bottom: 18px; line-height: 1.5; }
   .modal .field { margin-bottom: 12px; margin-top: 0; }
-
   .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
   .modal-actions .btn { flex: 1; justify-content: center; }
 
-  .error-box {
-    background: #c86a5a15; border: 1px solid #c86a5a44;
-    border-radius: var(--radius-sm); padding: 10px 14px;
-    font-size: 13px; color: var(--red); margin-top: 10px;
-    display: none;
-  }
-
+  .error-box { background: #c86a5a15; border: 1px solid #c86a5a44; border-radius: var(--radius-sm); padding: 10px 14px; font-size: 13px; color: var(--red); margin-top: 10px; display: none; }
   .error-box.visible { display: block; }
 
-  /* Misc */
   .divider { height: 1px; background: var(--border); margin: 16px 0; }
   .text-muted { color: var(--text2); font-size: 13px; }
   .mt8 { margin-top: 8px; }
 
-  .offline-banner {
-    background: #d4a84b15; border: 1px solid #d4a84b44;
-    border-radius: var(--radius-sm); padding: 10px 14px;
-    font-size: 13px; color: var(--yellow); margin-bottom: 16px; display: none;
-  }
-
+  .offline-banner { background: #d4a84b15; border: 1px solid #d4a84b44; border-radius: var(--radius-sm); padding: 10px 14px; font-size: 13px; color: var(--yellow); margin-bottom: 16px; display: none; }
   .offline-banner.visible { display: block; }
+
+  .dose-highlight { background: var(--accent); color: #1a1612; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
 </style>
 </head>
 <body>
@@ -399,7 +270,7 @@
     <div class="logo">☕</div>
     <div>
       <h1>Coffee Dial</h1>
-      <p>Fellow Ode Gen 1 + Aiden</p>
+      <p>Bag to cup — dialed in</p>
     </div>
     <div class="server-badge" id="serverBadge" onclick="checkServer()">
       <span class="dot"></span>
@@ -408,7 +279,7 @@
   </header>
 
   <div class="offline-banner" id="offlineBanner">
-    ⚠️ Backend not running — ratings and history won't persist. <a href="#" onclick="switchTab('settings'); return false;" style="color:var(--yellow);">Setup instructions</a>
+    Backend not running. <a href="#" onclick="switchTab('settings'); return false;" style="color:var(--yellow);">Setup instructions</a>
   </div>
 
   <div class="tabs">
@@ -420,74 +291,56 @@
   <!-- ====== DIAL IN ====== -->
   <div class="section active" id="tab-dial">
 
-    <!-- Coffee Input -->
     <div class="card">
       <div class="card-title">Your Coffee</div>
-
       <div class="input-mode-tabs">
-        <button class="input-mode-tab active" onclick="setInputMode('search')">🔍 Search by name</button>
-        <button class="input-mode-tab" onclick="setInputMode('paste')">📋 Paste bag text</button>
+        <button class="input-mode-tab active" onclick="setInputMode('search')">Search by name</button>
+        <button class="input-mode-tab" onclick="setInputMode('paste')">Paste bag text</button>
       </div>
-
-      <!-- Search mode -->
       <div class="input-panel active" id="panel-search">
         <div class="search-row">
-          <input type="text" id="searchInput" placeholder="e.g. Counter Culture Hologram, Onyx Geometry, Ethiopia Yirgacheffe…" onkeydown="if(event.key==='Enter') searchCoffee()">
-          <button class="btn btn-secondary" onclick="searchCoffee()" id="searchBtn">Search</button>
+          <input type="text" id="searchInput" placeholder="e.g. Counter Culture Hologram, Onyx Geometry..." onkeydown="if(event.key==='Enter') searchCoffee()">
+          <button class="btn btn-secondary" onclick="searchCoffee()">Search</button>
         </div>
       </div>
-
-      <!-- Paste mode -->
       <div class="input-panel" id="panel-paste">
-        <textarea id="bagText" placeholder="Paste the bag description, roaster notes, Bottomless email text, or any info about your coffee…"></textarea>
-        <button class="btn btn-secondary mt8" style="width:auto; margin-top:10px; padding: 9px 16px;" onclick="parseBagText()">✨ Parse with AI</button>
+        <textarea id="bagText" placeholder="Paste the bag description, roaster notes, or any info about your coffee..."></textarea>
+        <button class="btn btn-secondary mt8" style="width:auto; margin-top:10px; padding:9px 16px;" onclick="parseBagText()">Parse with AI</button>
       </div>
-
-      <!-- AI status indicator -->
-      <div class="ai-status" id="aiStatus">
-        <div class="spinner"></div>
-        <span id="aiStatusText">Analyzing coffee…</span>
-      </div>
-
-      <!-- Detected coffee -->
+      <div class="ai-status" id="aiStatus"><div class="spinner"></div><span id="aiStatusText">Analyzing...</span></div>
       <div class="detected-coffee" id="detectedCoffee">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-          <div class="dc-name" id="dcName">—</div>
+          <div class="dc-name" id="dcName"></div>
           <span class="confidence-badge" id="dcConfidence"></span>
         </div>
         <div class="tag-row" id="dcTags"></div>
         <div class="dc-meta" id="dcMeta"></div>
         <div class="dc-reasoning" id="dcReasoning"></div>
       </div>
-
       <div class="error-box" id="parseError"></div>
     </div>
 
-    <!-- Brew Size -->
     <div class="card">
-      <div class="card-title">Brew Size</div>
-      <div class="preset-chips" id="presetChips">
-        <!-- populated by JS -->
+      <div class="card-title">Your Equipment</div>
+      <div class="eq-select-row">
+        <div><label>Grinder</label><select id="grinderSelect"></select></div>
+        <div><label>Brewer</label><select id="brewerSelect"></select></div>
       </div>
-      <div class="brew-inputs">
-        <div class="field">
-          <label>Ounces (oz)</label>
-          <input type="number" id="brewOz" value="12.5" min="4" max="50" step="0.5" oninput="clearPresetSelection()">
-        </div>
-        <div class="field">
-          <label>Beans (grams)</label>
-          <input type="number" id="brewGrams" value="22" min="8" max="100" step="0.5" oninput="clearPresetSelection()">
-        </div>
-      </div>
-      <p class="text-muted" style="font-size:12px; margin-top:8px;">Ratio: <span id="brewRatioDisplay">—</span></p>
     </div>
 
-    <button class="btn btn-primary" onclick="generateRecommendation()" id="genBtn" disabled>
-      ⚡ Generate Settings
-    </button>
+    <div class="card">
+      <div class="card-title">How Much?</div>
+      <div class="preset-chips" id="presetChips"></div>
+      <div style="max-width:200px;">
+        <label>Ounces (oz)</label>
+        <input type="number" id="brewOz" value="12" min="4" max="50" step="1" oninput="clearPresetSelection()">
+      </div>
+      <p class="text-muted" style="font-size:12px; margin-top:8px;">Dose and ratio are computed for your coffee and brew method.</p>
+    </div>
 
-    <!-- Results -->
-    <div id="results" class="result-hidden" style="margin-top: 16px;">
+    <button class="btn btn-primary" onclick="generateRecommendation()" id="genBtn" disabled>Generate Settings</button>
+
+    <div id="results" class="result-hidden" style="margin-top:16px;">
 
       <div class="card">
         <div class="card-title">Detected Profile</div>
@@ -496,75 +349,71 @@
       </div>
 
       <div class="card">
-        <div class="card-title">Ode Gen 1 — Grind Setting</div>
+        <div class="card-title" id="grindCardTitle">Grind Setting</div>
         <div class="result-grid">
           <div class="result-card">
-            <div class="label">Setting</div>
-            <div class="big-num" id="resGrind">—</div>
-            <div class="sublabel" id="resGrindRange"></div>
+            <div class="label" id="grindLabel">Setting</div>
+            <div class="big-num" id="resGrind"></div>
+            <div class="sublabel" id="resGrindSub"></div>
           </div>
           <div class="result-card">
             <div class="label">Brew Temp</div>
-            <div class="big-num" id="resTemp" style="font-size:36px; line-height:1.2; padding-top:6px;">—</div>
-            <div class="sublabel" id="resTempF"></div>
+            <div class="big-num" id="resTemp" style="font-size:36px; line-height:1.2; padding-top:6px;"></div>
+            <div class="sublabel" id="resTempSub"></div>
+          </div>
+        </div>
+        <div class="result-grid" style="grid-template-columns:1fr 1fr 1fr;">
+          <div class="result-card">
+            <div class="label">Dose</div>
+            <div class="big-num" style="font-size:28px;" id="resDose"></div>
+          </div>
+          <div class="result-card">
+            <div class="label">Water</div>
+            <div class="big-num" style="font-size:28px;" id="resWater"></div>
+          </div>
+          <div class="result-card">
+            <div class="label">Ratio</div>
+            <div class="big-num" style="font-size:28px;" id="resRatio"></div>
           </div>
         </div>
         <div class="adjust-note" id="resAdjustNote" style="display:none;"></div>
       </div>
 
-      <div class="card">
-        <div class="card-title">Aiden Brew Profile</div>
-        <div class="profile-grid">
-          <div class="profile-item"><div class="lbl">Bloom Time</div><div class="val" id="resBloomDur">—</div></div>
-          <div class="profile-item"><div class="lbl">Bloom Ratio</div><div class="val" id="resBloomRatio">—</div></div>
-          <div class="profile-item"><div class="lbl">Brew Ratio</div><div class="val" id="resRatio">—</div></div>
-          <div class="profile-item"><div class="lbl">Pulses</div><div class="val" id="resPulses">—</div></div>
-          <div class="profile-item"><div class="lbl">Pulse Int.</div><div class="val" id="resPulseInt">—</div></div>
-          <div class="profile-item"><div class="lbl">Dose</div><div class="val" id="resDose">—</div></div>
-        </div>
+      <div class="card" id="recipeCard" style="display:none;">
+        <div class="card-title" id="recipeCardTitle">Brew Recipe</div>
+        <div id="recipeContent"></div>
       </div>
 
-      <!-- Push to Aiden -->
-      <div class="card">
+      <div class="card" id="aidenPushCard" style="display:none;">
         <div class="card-title">Push to Aiden</div>
         <div class="push-status" id="pushStatus"></div>
-        <div id="pushNoServer" class="text-muted" style="display:none; font-size:13px; margin-bottom:12px;">
-          Start the backend server to enable Aiden push. See the Settings tab.
-        </div>
         <div id="pushForm">
           <div class="field" style="margin-top:0; margin-bottom:12px;">
             <label>Profile name</label>
             <input type="text" id="profileName" placeholder="e.g. Ethiopia Yirgacheffe Light">
           </div>
-          <button class="btn btn-secondary" style="width:100%; justify-content:center;" onclick="pushToAiden()">
-            📡 Push Profile to Aiden
-          </button>
+          <button class="btn btn-secondary" style="width:100%; justify-content:center;" onclick="pushToAiden()">Push Profile to Aiden</button>
         </div>
       </div>
 
-      <!-- Rate -->
       <div class="card">
         <div class="card-title">Rate This Brew</div>
-        <p class="text-muted" style="margin-bottom:12px;">After brewing, rate the cup — the app adjusts future recommendations for similar coffees.</p>
+        <p class="text-muted" style="margin-bottom:12px;">After brewing, rate the cup to improve future recommendations.</p>
         <div class="rating-row">
-          <button class="rating-btn" onclick="setRating('bitter')" id="rate-bitter"><span class="emoji">😬</span>Too Bitter</button>
-          <button class="rating-btn" onclick="setRating('bright')" id="rate-bright"><span class="emoji">😮</span>Too Bright</button>
-          <button class="rating-btn" onclick="setRating('flat')"   id="rate-flat">  <span class="emoji">😐</span>Flat / Weak</button>
-          <button class="rating-btn" onclick="setRating('good')"  id="rate-good">  <span class="emoji">😍</span>Just Right</button>
+          <button class="rating-btn" onclick="setRating('bitter')" id="rate-bitter">Too Bitter</button>
+          <button class="rating-btn" onclick="setRating('bright')" id="rate-bright">Too Bright</button>
+          <button class="rating-btn" onclick="setRating('flat')"   id="rate-flat">Flat / Weak</button>
+          <button class="rating-btn" onclick="setRating('good')"  id="rate-good">Just Right</button>
         </div>
-        <button class="btn btn-primary" id="saveBrewBtn" onclick="saveBrew()" style="display:none; margin-top:14px;">
-          Save to History
-        </button>
+        <button class="btn btn-primary" id="saveBrewBtn" onclick="saveBrew()" style="display:none; margin-top:14px;">Save to History</button>
       </div>
     </div>
   </div>
 
   <!-- ====== HISTORY ====== -->
   <div class="section" id="tab-history">
-    <div class="text-muted" style="margin-bottom:16px;">Your brew log. Ratings influence future recommendations for similar roast/origin profiles.</div>
-    <div id="historyList">
-      <div class="history-empty">No brews yet. Dial in a bag and rate it to start your history.</div>
-    </div>
+    <div class="text-muted" style="margin-bottom:16px;">Your brew log. Ratings influence future recommendations.</div>
+    <div id="historyList"><div class="history-empty">No brews yet.</div></div>
   </div>
 
   <!-- ====== SETTINGS ====== -->
@@ -573,10 +422,7 @@
     <div class="card">
       <div class="card-title">AI Provider</div>
       <div class="settings-row">
-        <div>
-          <div class="settings-label">Provider</div>
-          <div class="settings-desc">Used for coffee name search and bag text parsing</div>
-        </div>
+        <div><div class="settings-label">Provider</div><div class="settings-desc">Used for coffee search and bag parsing</div></div>
         <select id="aiProvider" style="width:auto; min-width:140px;" onchange="saveAiProvider()">
           <option value="anthropic">Anthropic (Claude)</option>
           <option value="openai">OpenAI (GPT)</option>
@@ -593,29 +439,31 @@
     </div>
 
     <div class="card">
+      <div class="card-title">Display</div>
+      <div class="settings-row">
+        <div><div class="settings-label">Temperature unit</div></div>
+        <select id="tempUnit" style="width:auto; min-width:100px;" onchange="saveTempUnit()">
+          <option value="F">Fahrenheit</option>
+          <option value="C">Celsius</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
       <div class="card-title">Fellow Account</div>
       <div class="settings-row">
-        <div>
-          <div class="settings-label">Aiden Push</div>
-          <div class="settings-desc">Email + password for the Fellow app</div>
-        </div>
-        <span class="cred-status" id="fellowStatus">—</span>
+        <div><div class="settings-label">Aiden Push</div><div class="settings-desc">Email + password for the Fellow app</div></div>
+        <span class="cred-status" id="fellowStatus">-</span>
       </div>
       <div class="field-row" style="margin-top:14px;">
-        <div>
-          <label>Email</label>
-          <input type="text" id="fellowEmail" placeholder="your@email.com">
-        </div>
-        <div>
-          <label>Password</label>
-          <input type="password" id="fellowPassword" placeholder="Fellow app password">
-        </div>
+        <div><label>Email</label><input type="text" id="fellowEmail" placeholder="your@email.com"></div>
+        <div><label>Password</label><input type="password" id="fellowPassword" placeholder="Fellow app password"></div>
       </div>
       <button class="btn btn-secondary" style="width:100%; justify-content:center; margin-top:12px;" onclick="saveFellowCreds()">Save Fellow Credentials</button>
     </div>
 
     <div class="card">
-      <div class="card-title">Brew Presets</div>
+      <div class="card-title">Volume Presets</div>
       <div id="presetManager"></div>
       <div class="divider"></div>
       <button class="btn btn-secondary btn-sm" onclick="openAddPreset()">+ Add Preset</button>
@@ -624,28 +472,19 @@
     <div class="card">
       <div class="card-title">Backend Server</div>
       <div class="settings-row">
-        <div>
-          <div class="settings-label">Server status</div>
-          <div class="settings-desc">Running at localhost:8765</div>
-        </div>
-        <span class="cred-status" id="backendStatus">—</span>
+        <div><div class="settings-label">Server status</div><div class="settings-desc">Running at localhost:8765</div></div>
+        <span class="cred-status" id="backendStatus">-</span>
       </div>
       <div class="divider"></div>
       <div style="font-size:13px; color:var(--text2); line-height:1.8; font-family:monospace; background:var(--bg); border-radius:var(--radius-sm); padding:12px; border:1px solid var(--border);">
-        pip install flask flask-cors fellow-aiden<br>
-        cd backend<br>
-        python app.py
+        pip install flask flask-cors fellow-aiden<br>cd backend<br>python app.py
       </div>
-      <p class="text-muted" style="margin-top:10px; font-size:12px;">The backend persists your history to SQLite, handles AI parsing, and pushes profiles to your Aiden. Without it, the app is read-only with no persistence.</p>
     </div>
 
     <div class="card">
       <div class="card-title">Data</div>
       <div class="settings-row">
-        <div>
-          <div class="settings-label">Brew history</div>
-          <div class="settings-desc" id="historyCount">—</div>
-        </div>
+        <div><div class="settings-label">Brew history</div><div class="settings-desc" id="historyCount">-</div></div>
         <button class="btn btn-danger btn-sm" onclick="clearHistory()">Clear all</button>
       </div>
     </div>
@@ -653,25 +492,21 @@
     <div class="card">
       <div class="card-title">About</div>
       <div style="font-size:13px; color:var(--text2); line-height:1.8;">
-        <strong style="color:var(--text)">Coffee Dial</strong> — open source, built for Fellow Ode Gen 1 + Aiden.<br>
-        Grind recommendations based on roast, origin, process, batch size, and your brew history.<br>
-        Uses the <a href="https://github.com/9b/fellow-aiden" target="_blank" style="color:var(--accent);">9b/fellow-aiden</a> library for Aiden API access.<br><br>
-        <a href="https://github.com/coffee-dial/coffee-dial" target="_blank" style="color:var(--accent);">View on GitHub</a>
+        <strong style="color:var(--text)">Coffee Dial</strong> — open source bag-to-cup brew assistant.<br>
+        Grind and brew recommendations for 11 grinders and 21 brewers.<br>
+        Micron values are approximate — contributions welcome.<br><br>
+        <a href="https://github.com/tshiv/coffee-dial" target="_blank" style="color:var(--accent);">View on GitHub</a>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Add Preset Modal -->
 <div class="modal-overlay" id="addPresetModal">
   <div class="modal">
-    <h3>Add Brew Preset</h3>
-    <p>Save a named brew size for quick selection.</p>
+    <h3>Add Volume Preset</h3>
+    <p>Save a named brew volume for quick selection.</p>
     <div class="field"><label>Name</label><input type="text" id="newPresetName" placeholder="e.g. Morning Solo"></div>
-    <div class="field-row">
-      <div><label>Ounces (oz)</label><input type="number" id="newPresetOz" value="12.5" step="0.5" min="4"></div>
-      <div><label>Beans (grams)</label><input type="number" id="newPresetGrams" value="22" step="0.5" min="8"></div>
-    </div>
+    <div class="field"><label>Ounces (oz)</label><input type="number" id="newPresetOz" value="12" step="1" min="4"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('addPresetModal')">Cancel</button>
       <button class="btn btn-primary" style="margin-top:0;" onclick="saveNewPreset()">Save Preset</button>
@@ -680,612 +515,475 @@
 </div>
 
 <script>
-const API = 'http://localhost:8765/api';
+const API = '/api';
 let serverOnline = false;
 let currentCoffeeData = null;
 let currentRec = null;
 let currentRating = null;
 let selectedPresetId = null;
 let presets = [];
+let equipment = { grinders: [], brewers: [] };
+let tempUnit = 'F';
 
-// ─── Server check ─────────────────────────────────────────────
 async function checkServer() {
   try {
-    const r = await fetch(`${API}/settings`, { signal: AbortSignal.timeout(3000) });
-    serverOnline = r.ok;
-  } catch {
-    serverOnline = false;
-  }
+    const r = await fetch(API + '/settings', { signal: AbortSignal.timeout(3000) });
+    if (r.ok) {
+      serverOnline = true;
+      const s = await r.json();
+      tempUnit = s.temp_unit || 'F';
+      document.getElementById('tempUnit').value = tempUnit;
+    } else { serverOnline = false; }
+  } catch { serverOnline = false; }
   updateServerBadge();
-  return serverOnline;
 }
 
 function updateServerBadge() {
   const badge = document.getElementById('serverBadge');
   const label = document.getElementById('serverLabel');
   const banner = document.getElementById('offlineBanner');
-  const backendStatus = document.getElementById('backendStatus');
-
+  const bs = document.getElementById('backendStatus');
   if (serverOnline) {
-    badge.className = 'server-badge connected';
-    label.textContent = 'online';
+    badge.className = 'server-badge connected'; label.textContent = 'online';
     banner.classList.remove('visible');
-    if (backendStatus) { backendStatus.className = 'cred-status ok'; backendStatus.textContent = 'Running'; }
+    if (bs) { bs.className = 'cred-status ok'; bs.textContent = 'Running'; }
   } else {
-    badge.className = 'server-badge';
-    label.textContent = 'offline';
+    badge.className = 'server-badge'; label.textContent = 'offline';
     banner.classList.add('visible');
-    if (backendStatus) { backendStatus.className = 'cred-status missing'; backendStatus.textContent = 'Not running'; }
+    if (bs) { bs.className = 'cred-status missing'; bs.textContent = 'Not running'; }
   }
 }
 
-// ─── Tab switching ─────────────────────────────────────────────
+function fmtTemp(c, f) { return tempUnit === 'C' ? c + '\u00B0C' : f + '\u00B0F'; }
+function fmtTempAlt(c, f) { return tempUnit === 'C' ? f + '\u00B0F' : c + '\u00B0C'; }
+
 function switchTab(name) {
-  const names = ['dial','history','settings'];
-  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', names[i] === name));
+  ['dial','history','settings'].forEach((n, i) => {
+    document.querySelectorAll('.tab')[i].classList.toggle('active', n === name);
+  });
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'history') loadHistory();
   if (name === 'settings') loadSettings();
 }
 
-// ─── Input mode ────────────────────────────────────────────────
 function setInputMode(mode) {
-  document.querySelectorAll('.input-mode-tab').forEach((t, i) => {
-    t.classList.toggle('active', ['search','paste'][i] === mode);
-  });
-  document.querySelectorAll('.input-panel').forEach((p, i) => {
-    p.classList.toggle('active', ['search','paste'][i] === mode);
-  });
+  document.querySelectorAll('.input-mode-tab').forEach((t, i) => t.classList.toggle('active', ['search','paste'][i] === mode));
+  document.querySelectorAll('.input-panel').forEach((p, i) => p.classList.toggle('active', ['search','paste'][i] === mode));
 }
 
-// ─── Coffee search / parse ─────────────────────────────────────
+async function loadEquipment() {
+  if (!serverOnline) return;
+  try { const r = await fetch(API + '/equipment'); equipment = await r.json(); } catch { return; }
+  const gs = document.getElementById('grinderSelect');
+  const bs = document.getElementById('brewerSelect');
+  gs.textContent = ''; bs.textContent = '';
+
+  [['electric','Electric'],['manual','Manual']].forEach(([t,l]) => {
+    const items = equipment.grinders.filter(g => g.type === t);
+    if (!items.length) return;
+    const og = document.createElement('optgroup'); og.label = l;
+    items.forEach(g => { const o = document.createElement('option'); o.value = g.id; o.textContent = g.name; og.appendChild(o); });
+    gs.appendChild(og);
+  });
+
+  [['automatic','Automatic'],['manual','Manual']].forEach(([t,l]) => {
+    const items = equipment.brewers.filter(b => b.type === t);
+    if (!items.length) return;
+    const og = document.createElement('optgroup'); og.label = l;
+    items.forEach(b => { const o = document.createElement('option'); o.value = b.id; o.textContent = b.name; og.appendChild(o); });
+    bs.appendChild(og);
+  });
+
+  const sg = localStorage.getItem('cd_grinder');
+  const sb = localStorage.getItem('cd_brewer');
+  if (sg && gs.querySelector('option[value="' + sg + '"]')) gs.value = sg;
+  if (sb && bs.querySelector('option[value="' + sb + '"]')) bs.value = sb;
+  gs.onchange = function() { localStorage.setItem('cd_grinder', gs.value); };
+  bs.onchange = function() { localStorage.setItem('cd_brewer', bs.value); };
+}
+
 async function searchCoffee() {
-  const query = document.getElementById('searchInput').value.trim();
-  if (!query) return;
-  await runAI(() => fetch(`${API}/search-coffee`, {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ query })
-  }), 'Searching for coffee…');
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) return;
+  await runAI(function() { return fetch(API + '/search-coffee', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({query:q}) }); }, 'Searching...');
 }
 
 async function parseBagText() {
-  const bag_text = document.getElementById('bagText').value.trim();
-  if (!bag_text) return;
-  await runAI(() => fetch(`${API}/parse-bag`, {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ bag_text })
-  }), 'Parsing bag text…');
+  const t = document.getElementById('bagText').value.trim();
+  if (!t) return;
+  await runAI(function() { return fetch(API + '/parse-bag', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({bag_text:t}) }); }, 'Parsing...');
 }
 
 async function runAI(fetchFn, statusText) {
-  const aiStatus = document.getElementById('aiStatus');
-  const errBox   = document.getElementById('parseError');
+  var aiStatus = document.getElementById('aiStatus');
+  var errBox = document.getElementById('parseError');
   document.getElementById('aiStatusText').textContent = statusText;
-  aiStatus.classList.add('active');
-  errBox.classList.remove('visible');
-  hideDetected();
+  aiStatus.classList.add('active'); errBox.classList.remove('visible');
+  document.getElementById('detectedCoffee').classList.remove('visible');
   document.getElementById('genBtn').disabled = true;
 
-  if (!serverOnline) {
-    aiStatus.classList.remove('active');
-    showError('Backend server not running. Start it with: cd backend && python app.py');
-    return;
-  }
+  if (!serverOnline) { aiStatus.classList.remove('active'); showError('Backend not running.'); return; }
 
   try {
-    const r = await fetchFn();
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || 'Unknown error');
+    var r = await fetchFn();
+    var data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Error');
     showDetected(data);
     currentCoffeeData = data;
     document.getElementById('genBtn').disabled = false;
-  } catch (e) {
-    showError(e.message);
-  } finally {
-    aiStatus.classList.remove('active');
-  }
+  } catch (e) { showError(e.message); }
+  finally { aiStatus.classList.remove('active'); }
 }
 
 function showDetected(d) {
-  const el = document.getElementById('detectedCoffee');
-  el.classList.add('visible');
+  var el = document.getElementById('detectedCoffee'); el.classList.add('visible');
+  var roast = d.roast || 'unknown';
+  var name = d.coffee_name || (d.origin ? d.origin + ' Coffee' : 'Unknown Coffee');
+  document.getElementById('dcName').textContent = [name, d.roaster].filter(Boolean).join(' \u00B7 ');
+  var conf = document.getElementById('dcConfidence');
+  conf.textContent = d.confidence || ''; conf.className = 'confidence-badge confidence-' + (d.confidence || 'medium');
 
-  const roast = d.roast || 'unknown';
-  const name = d.coffee_name || (d.origin ? `${d.origin} Coffee` : 'Unknown Coffee');
-  document.getElementById('dcName').textContent = [name, d.roaster].filter(Boolean).join(' · ');
-
-  const conf = document.getElementById('dcConfidence');
-  conf.textContent = d.confidence || '';
-  conf.className = 'confidence-badge confidence-' + (d.confidence || 'medium');
-
-  // Tags
-  const tagRow = document.getElementById('dcTags');
-  tagRow.innerHTML = '';
-  const roastClass = roast.includes('light') ? 'light' : roast.includes('dark') ? 'dark' : 'medium';
-  addTag(tagRow, roast.replace('-',' '), roastClass);
+  var tagRow = document.getElementById('dcTags'); tagRow.textContent = '';
+  var rc = roast.includes('light') ? 'light' : roast.includes('dark') ? 'dark' : 'medium';
+  addTag(tagRow, roast.replace(/-/g,' '), rc);
   if (d.origin) addTag(tagRow, d.origin, 'origin');
   if (d.process) addTag(tagRow, d.process, 'process');
   if (d.variety) addTag(tagRow, d.variety, '');
 
-  // Meta
-  const meta = [];
-  if (d.flavor_notes?.length) meta.push('Notes: ' + d.flavor_notes.join(', '));
-  if (d.altitude_m) meta.push(`Altitude: ${d.altitude_m}m`);
-  if (d.roaster_temp_c) meta.push(`Suggested temp: ${d.roaster_temp_c}°C / ${Math.round(d.roaster_temp_c * 9/5 + 32)}°F`);
-  document.getElementById('dcMeta').textContent = meta.join(' · ');
+  var meta = [];
+  if (d.flavor_notes && d.flavor_notes.length) meta.push('Notes: ' + d.flavor_notes.join(', '));
+  if (d.altitude_m) meta.push('Altitude: ' + d.altitude_m + 'm');
+  document.getElementById('dcMeta').textContent = meta.join(' \u00B7 ');
   document.getElementById('dcReasoning').textContent = d.reasoning || '';
 }
 
 function addTag(container, text, cls) {
-  const t = document.createElement('span');
+  var t = document.createElement('span');
   t.className = 'tag' + (cls ? ' ' + cls : '');
-  t.textContent = text;
-  container.appendChild(t);
+  t.textContent = text; container.appendChild(t);
 }
 
-function hideDetected() {
-  document.getElementById('detectedCoffee').classList.remove('visible');
-}
+function showError(msg) { var el = document.getElementById('parseError'); el.textContent = msg; el.classList.add('visible'); }
 
-function showError(msg) {
-  const el = document.getElementById('parseError');
-  el.textContent = msg;
-  el.classList.add('visible');
-}
-
-// ─── Brew size presets ─────────────────────────────────────────
 async function loadPresets() {
-  if (!serverOnline) {
-    presets = [
-      { id: 1, name: 'Taylor (12.5oz)', oz: 12.5, grams: 22 },
-      { id: 2, name: 'Wife (14oz)',     oz: 14,   grams: 24.5 },
-      { id: 3, name: 'Batch (30oz)',    oz: 30,   grams: 52 },
-    ];
-  } else {
-    try {
-      const r = await fetch(`${API}/presets`);
-      presets = await r.json();
-    } catch {
-      presets = [];
-    }
-  }
-  renderPresetChips();
-  renderPresetManager();
+  if (!serverOnline) { presets = [{id:1,name:'Solo (12oz)',oz:12},{id:2,name:'Two cups (20oz)',oz:20},{id:3,name:'Full pot (32oz)',oz:32}]; }
+  else { try { var r = await fetch(API + '/presets'); presets = await r.json(); } catch { presets = []; } }
+  renderPresetChips(); renderPresetManager();
 }
 
 function renderPresetChips() {
-  const container = document.getElementById('presetChips');
-  container.innerHTML = '';
-  presets.forEach(p => {
-    const btn = document.createElement('button');
+  var c = document.getElementById('presetChips'); c.textContent = '';
+  presets.forEach(function(p) {
+    var btn = document.createElement('button');
     btn.className = 'preset-chip' + (selectedPresetId === p.id ? ' selected' : '');
-    btn.textContent = p.name;
-    btn.onclick = () => selectPreset(p);
-    container.appendChild(btn);
+    btn.textContent = p.name; btn.onclick = function() { selectPreset(p); };
+    c.appendChild(btn);
   });
 }
 
-function selectPreset(p) {
-  selectedPresetId = p.id;
-  document.getElementById('brewOz').value = p.oz;
-  document.getElementById('brewGrams').value = p.grams;
-  renderPresetChips();
-  updateBrewRatio();
-}
+function selectPreset(p) { selectedPresetId = p.id; document.getElementById('brewOz').value = p.oz; renderPresetChips(); }
+function clearPresetSelection() { selectedPresetId = null; renderPresetChips(); }
 
-function clearPresetSelection() {
-  selectedPresetId = null;
-  renderPresetChips();
-  updateBrewRatio();
-}
-
-function updateBrewRatio() {
-  const oz    = parseFloat(document.getElementById('brewOz').value) || 0;
-  const grams = parseFloat(document.getElementById('brewGrams').value) || 1;
-  const ml = oz * 29.5735;
-  const ratio = (ml / grams).toFixed(1);
-  document.getElementById('brewRatioDisplay').textContent = `1:${ratio} (${ml.toFixed(0)}ml / ${grams}g)`;
-}
-
-document.getElementById('brewOz').addEventListener('input', updateBrewRatio);
-document.getElementById('brewGrams').addEventListener('input', updateBrewRatio);
-
-// ─── Generate recommendation ───────────────────────────────────
 async function generateRecommendation() {
   if (!currentCoffeeData) return;
+  var oz = parseFloat(document.getElementById('brewOz').value) || 12;
+  var grinder_id = document.getElementById('grinderSelect').value;
+  var brewer_id = document.getElementById('brewerSelect').value;
+  if (!serverOnline) { showError('Backend required.'); return; }
 
-  const oz    = parseFloat(document.getElementById('brewOz').value)    || 12.5;
-  const grams = parseFloat(document.getElementById('brewGrams').value) || 22;
+  try {
+    var r = await fetch(API + '/recommend', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({coffee_data:currentCoffeeData, grinder_id:grinder_id, brewer_id:brewer_id, oz:oz}) });
+    var rec = await r.json();
+    if (!r.ok) throw new Error(rec.error || 'Error');
+    currentRec = Object.assign({}, rec, {grinder_id:grinder_id, brewer_id:brewer_id, brew_oz:oz});
+    renderResults(rec, currentCoffeeData);
+    document.getElementById('results').classList.remove('result-hidden');
+    setTimeout(function() { document.getElementById('results').scrollIntoView({behavior:'smooth'}); }, 50);
+  } catch (e) { showError('Error: ' + e.message); return; }
 
-  let rec;
-
-  if (serverOnline) {
-    try {
-      const r = await fetch(`${API}/recommend`, {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ coffee_data: currentCoffeeData, oz, grams })
-      });
-      rec = await r.json();
-    } catch (e) {
-      showError('Recommendation error: ' + e.message);
-      return;
-    }
-  } else {
-    // Offline fallback — basic recommendation
-    rec = offlineRecommend(currentCoffeeData, oz, grams);
-  }
-
-  currentRec = { ...currentCoffeeData, ...rec, brew_oz: oz, brew_grams: grams };
-
-  renderResults(rec, currentCoffeeData);
-  document.getElementById('results').classList.remove('result-hidden');
-  setTimeout(() => document.getElementById('results').scrollIntoView({ behavior: 'smooth' }), 50);
-
-  // Reset rating
   currentRating = null;
-  document.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.rating-btn').forEach(function(b) { b.classList.remove('selected'); });
   document.getElementById('saveBrewBtn').style.display = 'none';
 }
 
-function offlineRecommend(cd, oz, grams) {
-  const ROAST_BASE = {
-    'light':        { grind: 4,   temp_c: 96, bloom_dur: 45, bloom_ratio: 2.5, ratio: 16.5, pulses: 3, pulse_int: 30 },
-    'medium-light': { grind: 5,   temp_c: 94, bloom_dur: 40, bloom_ratio: 2.5, ratio: 16,   pulses: 3, pulse_int: 28 },
-    'medium':       { grind: 6,   temp_c: 93, bloom_dur: 35, bloom_ratio: 2,   ratio: 15.5, pulses: 2, pulse_int: 25 },
-    'medium-dark':  { grind: 7,   temp_c: 91, bloom_dur: 30, bloom_ratio: 2,   ratio: 15,   pulses: 2, pulse_int: 22 },
-    'dark':         { grind: 8,   temp_c: 89, bloom_dur: 25, bloom_ratio: 1.5, ratio: 14.5, pulses: 1, pulse_int: 20 },
-  };
-  const base = { ...(ROAST_BASE[cd.roast] || ROAST_BASE['medium']) };
-  const offset = oz <= 10 ? -0.5 : oz <= 16 ? 0 : oz <= 22 ? 0.5 : 1;
-  base.grind = Math.max(1, Math.min(11, base.grind + offset));
-  base.temp_f = Math.round(base.temp_c * 9/5 + 32);
-  base.bias_notes = [];
-  return base;
-}
-
 function renderResults(rec, cd) {
-  // Tags
-  const tagRow = document.getElementById('resultTags');
-  tagRow.innerHTML = '';
-  const roastClass = (cd.roast||'').includes('light') ? 'light' : (cd.roast||'').includes('dark') ? 'dark' : 'medium';
-  addTag(tagRow, (cd.roast||'').replace('-',' '), roastClass);
+  var recipe = rec.recipe;
+  var tagRow = document.getElementById('resultTags'); tagRow.textContent = '';
+  var rc = (cd.roast||'').includes('light') ? 'light' : (cd.roast||'').includes('dark') ? 'dark' : 'medium';
+  addTag(tagRow, (cd.roast||'').replace(/-/g,' '), rc);
   if (cd.origin) addTag(tagRow, cd.origin, 'origin');
   if (cd.process) addTag(tagRow, cd.process, 'process');
 
-  // Rationale
-  const notes = rec.bias_notes || [];
-  let rationale = `<strong>${(cd.roast||'').replace('-',' ')} roast</strong>`;
-  if (cd.origin) rationale += ` from <strong>${cd.origin}</strong>`;
-  if (cd.process) rationale += `, <strong>${cd.process}</strong> process`;
-  if (notes.length) rationale += `. ${notes[0]}`;
-  if (notes.length > 1) rationale += ` ${notes[1]}`;
-  document.getElementById('resultRationale').innerHTML = rationale;
+  var notes = rec.bias_notes || [];
+  var rat = '<strong>' + (cd.roast||'').replace(/-/g,' ') + ' roast</strong>';
+  if (cd.origin) rat += ' from <strong>' + cd.origin + '</strong>';
+  if (cd.process) rat += ', <strong>' + cd.process + '</strong> process';
+  if (notes.length) rat += '. ' + notes.join('. ');
+  document.getElementById('resultRationale').innerHTML = rat;
 
-  // Grind
-  document.getElementById('resGrind').textContent = rec.grind;
-  const ROAST_RANGES = {'light':'3–5','medium-light':'4–6','medium':'5–7','medium-dark':'6–8','dark':'7–9'};
-  document.getElementById('resGrindRange').textContent = `${cd.roast||''} range: ${ROAST_RANGES[cd.roast]||'—'}`;
-  document.getElementById('resTemp').textContent = `${rec.temp_c}°C`;
-  document.getElementById('resTempF').textContent = `${rec.temp_f}°F`;
+  document.getElementById('grindCardTitle').textContent = rec.grinder_name;
+  document.getElementById('grindLabel').textContent = rec.grinder_display.indexOf('click') >= 0 ? 'Clicks' : 'Setting';
+  document.getElementById('resGrind').textContent = rec.grinder_setting;
+  document.getElementById('resGrindSub').textContent = rec.grinder_display;
+  document.getElementById('resTemp').textContent = fmtTemp(recipe.temp_c, recipe.temp_f);
+  document.getElementById('resTempSub').textContent = fmtTempAlt(recipe.temp_c, recipe.temp_f);
+  document.getElementById('resDose').textContent = recipe.dose_g + 'g';
+  document.getElementById('resWater').textContent = rec.water_oz + 'oz';
+  document.getElementById('resRatio').textContent = '1:' + recipe.ratio;
 
-  const learnNote = notes.find(n => n.startsWith('History:'));
-  const adjNote = document.getElementById('resAdjustNote');
-  if (learnNote) {
-    adjNote.textContent = '⚡ ' + learnNote;
-    adjNote.style.display = 'block';
-  } else {
-    adjNote.style.display = 'none';
+  var learnNote = notes.find(function(n) { return n.indexOf('History:') === 0; });
+  var adj = document.getElementById('resAdjustNote');
+  if (learnNote) { adj.textContent = learnNote; adj.style.display = 'block'; } else { adj.style.display = 'none'; }
+
+  renderRecipe(recipe);
+
+  var isAiden = currentRec.brewer_id === 'fellow_aiden';
+  document.getElementById('aidenPushCard').style.display = isAiden && serverOnline ? 'block' : 'none';
+  if (isAiden) {
+    document.getElementById('profileName').value = cd.coffee_name || cd.origin || 'Coffee Dial';
+    document.getElementById('pushStatus').className = 'push-status';
   }
-
-  // Profile
-  document.getElementById('resBloomDur').textContent    = `${rec.bloom_dur}s`;
-  document.getElementById('resBloomRatio').textContent  = `${rec.bloom_ratio}×`;
-  document.getElementById('resRatio').textContent       = `1:${rec.ratio}`;
-  document.getElementById('resPulses').textContent      = rec.pulses;
-  document.getElementById('resPulseInt').textContent    = `${rec.pulse_int}s`;
-
-  const oz = parseFloat(document.getElementById('brewOz').value) || 12.5;
-  const grams = parseFloat(document.getElementById('brewGrams').value) || 22;
-  document.getElementById('resDose').textContent = `${grams}g`;
-
-  // Push card
-  const pushNoServer = document.getElementById('pushNoServer');
-  const pushForm     = document.getElementById('pushForm');
-  pushNoServer.style.display = serverOnline ? 'none' : 'block';
-  pushForm.style.display     = serverOnline ? 'block' : 'none';
-
-  const coffeeName = cd.coffee_name || (cd.origin ? cd.origin + ' ' + (cd.roast||'') : 'Coffee Dial');
-  document.getElementById('profileName').value = coffeeName;
-  document.getElementById('pushStatus').className = 'push-status';
 }
 
-// ─── Aiden push ────────────────────────────────────────────────
-async function pushToAiden() {
-  const statusEl = document.getElementById('pushStatus');
-  statusEl.className = 'push-status loading';
-  statusEl.innerHTML = '<div class="spinner"></div> Connecting to Aiden…';
+function renderRecipe(recipe) {
+  var card = document.getElementById('recipeCard');
+  var title = document.getElementById('recipeCardTitle');
+  var content = document.getElementById('recipeContent');
 
-  try {
-    const r = await fetch(`${API}/push-aiden`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        profile_name: document.getElementById('profileName').value,
-        rec: currentRec
-      })
+  if (recipe.type === 'aiden_profile') {
+    card.style.display = 'block'; title.textContent = 'Aiden Brew Profile';
+    content.textContent = '';
+    var grid = document.createElement('div'); grid.className = 'profile-grid';
+    var items = [
+      ['Bloom Time', recipe.bloom_dur + 's'], ['Bloom Ratio', recipe.bloom_ratio + '\u00D7'],
+      ['Pulses', recipe.pulses], ['Pulse Int.', recipe.pulse_int + 's'],
+      ['Temperature', fmtTemp(recipe.temp_c, recipe.temp_f)], ['Ratio', '1:' + recipe.ratio]
+    ];
+    items.forEach(function(item) {
+      var pi = document.createElement('div'); pi.className = 'profile-item';
+      var lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = item[0];
+      var val = document.createElement('div'); val.className = 'val'; val.textContent = item[1];
+      pi.appendChild(lbl); pi.appendChild(val); grid.appendChild(pi);
     });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error);
-    statusEl.className = 'push-status success';
-    statusEl.textContent = '✅ Profile pushed to Aiden!';
-  } catch (e) {
-    statusEl.className = 'push-status error';
-    statusEl.textContent = '❌ ' + e.message;
-  }
+    content.appendChild(grid);
+
+  } else if (recipe.steps && recipe.steps.length) {
+    card.style.display = 'block';
+    title.textContent = recipe.type === 'pour_over_steps' ? 'Pour-Over Recipe' :
+                        recipe.type === 'aeropress_steps' ? 'AeroPress Recipe' : 'Brew Recipe';
+    content.textContent = '';
+    var ol = document.createElement('ol'); ol.className = 'recipe-steps';
+    recipe.steps.forEach(function(s, i) {
+      var li = document.createElement('li'); li.className = 'recipe-step';
+      var num = document.createElement('div'); num.className = 'step-num'; num.textContent = i + 1;
+      var body = document.createElement('div'); body.className = 'step-body';
+      var action = document.createElement('div'); action.className = 'step-action'; action.textContent = s.action;
+      var note = document.createElement('div'); note.className = 'step-note'; note.textContent = s.note;
+      body.appendChild(action); body.appendChild(note);
+      if (s.duration_s) { var d = document.createElement('div'); d.className = 'step-detail'; d.textContent = s.duration_s + 's'; body.appendChild(d); }
+      li.appendChild(num); li.appendChild(body); ol.appendChild(li);
+    });
+    content.appendChild(ol);
+    if (recipe.target_total_time_s) {
+      var p = document.createElement('p'); p.className = 'text-muted'; p.style.marginTop = '12px';
+      p.textContent = 'Target total: ~' + Math.floor(recipe.target_total_time_s/60) + 'm ' + (recipe.target_total_time_s%60) + 's';
+      content.appendChild(p);
+    }
+    if (recipe.steep_time_s) {
+      var p2 = document.createElement('p'); p2.className = 'text-muted'; p2.style.marginTop = '12px';
+      p2.textContent = 'Steep time: ' + Math.floor(recipe.steep_time_s/60) + ' minutes';
+      content.appendChild(p2);
+    }
+
+  } else if (recipe.type === 'simple_drip') {
+    card.style.display = 'block'; title.textContent = 'Brew Instructions';
+    content.textContent = '';
+    var p3 = document.createElement('p');
+    p3.style.cssText = 'font-size:14px; line-height:1.7; color:var(--text2);';
+    p3.textContent = 'Add ' + recipe.dose_g + 'g of ground coffee to the filter. Fill reservoir with ' + recipe.water_oz + 'oz (' + recipe.water_g + 'g) of water. ' + (recipe.note || '');
+    content.appendChild(p3);
+
+  } else if (recipe.type === 'precision_drip') {
+    card.style.display = 'block'; title.textContent = 'Precision Brewer Settings';
+    content.textContent = '';
+    var grid2 = document.createElement('div'); grid2.className = 'profile-grid';
+    [['Temperature', fmtTemp(recipe.temp_c, recipe.temp_f)], ['Bloom Time', recipe.bloom_dur + 's'], ['Flow Rate', recipe.flow_rate]].forEach(function(item) {
+      var pi = document.createElement('div'); pi.className = 'profile-item';
+      var lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = item[0];
+      var val = document.createElement('div'); val.className = 'val'; val.textContent = item[1];
+      pi.appendChild(lbl); pi.appendChild(val); grid2.appendChild(pi);
+    });
+    content.appendChild(grid2);
+    if (recipe.note) { var n = document.createElement('p'); n.className = 'text-muted'; n.style.marginTop = '8px'; n.textContent = recipe.note; content.appendChild(n); }
+
+  } else { card.style.display = 'none'; }
 }
 
-// ─── Rating ────────────────────────────────────────────────────
+async function pushToAiden() {
+  var el = document.getElementById('pushStatus');
+  el.className = 'push-status loading';
+  el.textContent = ''; var sp = document.createElement('div'); sp.className = 'spinner';
+  el.appendChild(sp); el.appendChild(document.createTextNode(' Connecting to Aiden...'));
+  try {
+    var r = await fetch(API + '/push-aiden', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({profile_name: document.getElementById('profileName').value, rec: currentRec.recipe}) });
+    var data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+    el.className = 'push-status success'; el.textContent = 'Profile pushed to Aiden!';
+  } catch (e) { el.className = 'push-status error'; el.textContent = e.message; }
+}
+
 function setRating(r) {
   currentRating = r;
-  document.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.rating-btn').forEach(function(b) { b.classList.remove('selected'); });
   document.getElementById('rate-' + r).classList.add('selected');
   document.getElementById('saveBrewBtn').style.display = 'block';
 }
 
 async function saveBrew() {
   if (!currentRec || !currentRating) return;
-
-  const entry = {
-    bag_text:    document.getElementById('bagText').value || document.getElementById('searchInput').value,
-    coffee_name: currentCoffeeData?.coffee_name,
-    roast:       currentCoffeeData?.roast,
-    origin:      currentCoffeeData?.origin,
-    process:     currentCoffeeData?.process,
-    roaster:     currentCoffeeData?.roaster,
-    grind:       currentRec.grind,
-    temp_c:      currentRec.temp_c,
-    ratio:       currentRec.ratio,
-    bloom_dur:   currentRec.bloom_dur,
-    bloom_ratio: currentRec.bloom_ratio,
-    pulses:      currentRec.pulses,
-    pulse_int:   currentRec.pulse_int,
-    brew_oz:     parseFloat(document.getElementById('brewOz').value),
-    brew_grams:  parseFloat(document.getElementById('brewGrams').value),
-    preset_name: presets.find(p => p.id === selectedPresetId)?.name,
-    rating:      currentRating,
-    timestamp:   Date.now(),
+  var entry = {
+    bag_text: document.getElementById('bagText').value || document.getElementById('searchInput').value,
+    coffee_name: currentCoffeeData ? currentCoffeeData.coffee_name : null,
+    roast: currentCoffeeData ? currentCoffeeData.roast : null,
+    origin: currentCoffeeData ? currentCoffeeData.origin : null,
+    process: currentCoffeeData ? currentCoffeeData.process : null,
+    roaster: currentCoffeeData ? currentCoffeeData.roaster : null,
+    grinder_id: currentRec.grinder_id, brewer_id: currentRec.brewer_id,
+    grind: currentRec.grinder_setting, grinder_setting_display: currentRec.grinder_display,
+    target_microns: currentRec.target_microns,
+    temp_c: currentRec.recipe ? currentRec.recipe.temp_c : null,
+    ratio: currentRec.recipe ? currentRec.recipe.ratio : null,
+    dose_g: currentRec.recipe ? currentRec.recipe.dose_g : null,
+    water_g: currentRec.recipe ? currentRec.recipe.water_g : null,
+    brew_oz: currentRec.brew_oz, recipe_json: JSON.stringify(currentRec.recipe),
+    preset_name: (presets.find(function(p) { return p.id === selectedPresetId; }) || {}).name,
+    rating: currentRating, timestamp: Date.now()
   };
-
-  const saveBtn = document.getElementById('saveBrewBtn');
-  saveBtn.disabled = true;
-  saveBtn.textContent = 'Saving…';
-
-  if (serverOnline) {
-    try {
-      await fetch(`${API}/history`, {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify(entry)
-      });
-    } catch {}
-  } else {
-    // Fallback: localStorage
-    const hist = JSON.parse(localStorage.getItem('cd_history_fallback') || '[]');
-    hist.unshift({ ...entry, id: Date.now() });
-    localStorage.setItem('cd_history_fallback', JSON.stringify(hist.slice(0, 100)));
-  }
-
-  saveBtn.textContent = '✅ Saved!';
-  setTimeout(() => {
-    saveBtn.textContent = 'Save to History';
-    saveBtn.disabled = false;
-    saveBtn.style.display = 'none';
-  }, 2000);
+  var btn = document.getElementById('saveBrewBtn'); btn.disabled = true; btn.textContent = 'Saving...';
+  if (serverOnline) { try { await fetch(API + '/history', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(entry) }); } catch(e) {} }
+  btn.textContent = 'Saved!';
+  setTimeout(function() { btn.textContent = 'Save to History'; btn.disabled = false; btn.style.display = 'none'; }, 2000);
 }
 
-// ─── History ───────────────────────────────────────────────────
-const RATING_EMOJI  = { bitter:'😬', bright:'😮', flat:'😐', good:'😍' };
-const RATING_LABEL  = { bitter:'Too bitter', bright:'Too bright', flat:'Flat/weak', good:'Just right' };
+var RATING_LABEL = {bitter:'Too bitter', bright:'Too bright', flat:'Flat/weak', good:'Just right'};
 
 async function loadHistory() {
-  const el = document.getElementById('historyList');
+  var el = document.getElementById('historyList');
+  var history = [];
+  if (serverOnline) { try { var r = await fetch(API + '/history'); history = await r.json(); } catch(e) {} }
+  if (!history.length) { el.textContent = ''; var empty = document.createElement('div'); empty.className = 'history-empty'; empty.textContent = 'No brews yet.'; el.appendChild(empty); return; }
 
-  let history = [];
-  if (serverOnline) {
-    try {
-      const r = await fetch(`${API}/history`);
-      history = await r.json();
-    } catch {}
-  } else {
-    history = JSON.parse(localStorage.getItem('cd_history_fallback') || '[]');
-  }
+  el.textContent = '';
+  history.forEach(function(b) {
+    var d = new Date(b.timestamp);
+    var dateStr = d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+    var name = b.coffee_name || (b.bag_text ? b.bag_text.split(' ').slice(0,4).join(' ') + '...' : 'Unknown');
 
-  if (!history.length) {
-    el.innerHTML = '<div class="history-empty">No brews yet. Dial in a bag and rate it to start your history.</div>';
-    return;
-  }
-
-  el.innerHTML = history.map(b => {
-    const d = new Date(b.timestamp);
-    const dateStr = d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
-    const name = b.coffee_name || b.bag_text?.split(' ').slice(0,4).join(' ') + '…' || 'Unknown';
-    return `<div class="brew-entry">
-      <div class="brew-date">${dateStr}</div>
-      <div class="brew-main">
-        <div class="brew-name">${name}</div>
-        <div class="brew-meta">${[b.roast?.replace('-',' '), b.origin, b.process].filter(Boolean).join(' · ')}</div>
-        <div class="brew-chips">
-          ${b.grind   ? `<span class="brew-chip">Grind ${b.grind}</span>` : ''}
-          ${b.temp_c  ? `<span class="brew-chip">${b.temp_c}°C</span>` : ''}
-          ${b.brew_oz ? `<span class="brew-chip">${b.brew_oz}oz / ${b.brew_grams}g</span>` : ''}
-          ${b.preset_name ? `<span class="brew-chip">${b.preset_name}</span>` : ''}
-        </div>
-      </div>
-      <div class="brew-rating" title="${RATING_LABEL[b.rating]||''}">${RATING_EMOJI[b.rating]||'☕'}</div>
-    </div>`;
-  }).join('');
+    var entry = document.createElement('div'); entry.className = 'brew-entry';
+    var dateEl = document.createElement('div'); dateEl.className = 'brew-date'; dateEl.textContent = dateStr;
+    var main = document.createElement('div'); main.className = 'brew-main';
+    var nameEl = document.createElement('div'); nameEl.className = 'brew-name'; nameEl.textContent = name;
+    var meta = document.createElement('div'); meta.className = 'brew-meta';
+    meta.textContent = [b.roast ? b.roast.replace(/-/g,' ') : null, b.origin, b.process].filter(Boolean).join(' \u00B7 ');
+    var chips = document.createElement('div'); chips.className = 'brew-chips';
+    if (b.grinder_setting_display) { var c1 = document.createElement('span'); c1.className = 'brew-chip'; c1.textContent = b.grinder_setting_display; chips.appendChild(c1); }
+    if (b.brew_oz) { var c2 = document.createElement('span'); c2.className = 'brew-chip'; c2.textContent = b.brew_oz + 'oz'; chips.appendChild(c2); }
+    if (b.dose_g) { var c3 = document.createElement('span'); c3.className = 'brew-chip'; c3.textContent = b.dose_g + 'g dose'; chips.appendChild(c3); }
+    main.appendChild(nameEl); main.appendChild(meta); main.appendChild(chips);
+    var rating = document.createElement('div'); rating.className = 'brew-rating';
+    rating.textContent = RATING_LABEL[b.rating] || '-'; rating.title = RATING_LABEL[b.rating] || '';
+    entry.appendChild(dateEl); entry.appendChild(main); entry.appendChild(rating);
+    el.appendChild(entry);
+  });
 }
 
 async function clearHistory() {
   if (!confirm('Clear all brew history?')) return;
-  if (serverOnline) {
-    const r = await fetch(`${API}/history`);
-    const items = await r.json();
-    await Promise.all(items.map(i => fetch(`${API}/history/${i.id}`, { method: 'DELETE' })));
-  }
-  localStorage.removeItem('cd_history_fallback');
-  loadHistory();
-  document.getElementById('historyCount').textContent = '0 brews saved';
+  if (serverOnline) { var r = await fetch(API + '/history'); var items = await r.json(); await Promise.all(items.map(function(i) { return fetch(API + '/history/' + i.id, {method:'DELETE'}); })); }
+  loadHistory(); document.getElementById('historyCount').textContent = '0 brews saved';
 }
 
-// ─── Settings ──────────────────────────────────────────────────
 async function loadSettings() {
-  updateServerBadge();
-  renderPresetManager();
-
-  if (!serverOnline) {
-    document.getElementById('aiKeyStatus').textContent = 'Server offline — settings stored locally only';
-    document.getElementById('fellowStatus').className = 'cred-status missing';
-    document.getElementById('fellowStatus').textContent = 'Server offline';
-    return;
-  }
-
+  updateServerBadge(); renderPresetManager();
+  if (!serverOnline) { document.getElementById('aiKeyStatus').textContent = 'Server offline'; document.getElementById('fellowStatus').className = 'cred-status missing'; document.getElementById('fellowStatus').textContent = 'Offline'; return; }
   try {
-    const r = await fetch(`${API}/settings`);
-    const s = await r.json();
-
+    var r = await fetch(API + '/settings'); var s = await r.json();
     document.getElementById('aiProvider').value = s.ai_provider || 'anthropic';
     updateAiKeyLabel(s.ai_provider || 'anthropic');
-
-    document.getElementById('aiKeyStatus').textContent =
-      s.has_openai_key || s.has_anthropic_key ? '✓ API key saved' : 'No key saved';
-
-    const fellowOk = s.has_fellow_creds;
-    const fellowEl = document.getElementById('fellowStatus');
-    fellowEl.className = 'cred-status ' + (fellowOk ? 'ok' : 'missing');
-    fellowEl.textContent = fellowOk ? `✓ ${s.fellow_email}` : 'Not set';
-
-    document.getElementById('fellow_email_display') && (document.getElementById('fellow_email_display').textContent = s.fellow_email || '');
-  } catch {}
-
-  // History count
-  try {
-    const r = await fetch(`${API}/history?limit=1000`);
-    const h = await r.json();
-    document.getElementById('historyCount').textContent = `${h.length} brew${h.length !== 1 ? 's' : ''} saved`;
-  } catch {}
+    document.getElementById('tempUnit').value = s.temp_unit || 'F'; tempUnit = s.temp_unit || 'F';
+    document.getElementById('aiKeyStatus').textContent = (s.has_openai_key || s.has_anthropic_key) ? 'Key saved' : 'No key';
+    var fEl = document.getElementById('fellowStatus');
+    fEl.className = 'cred-status ' + (s.has_fellow_creds ? 'ok' : 'missing');
+    fEl.textContent = s.has_fellow_creds ? s.fellow_email : 'Not set';
+  } catch(e) {}
+  try { var r2 = await fetch(API + '/history?limit=1000'); var h = await r2.json(); document.getElementById('historyCount').textContent = h.length + ' brew' + (h.length !== 1 ? 's' : '') + ' saved'; } catch(e) {}
 }
 
-function updateAiKeyLabel(provider) {
-  document.getElementById('aiKeyLabel').textContent =
-    provider === 'openai' ? 'OpenAI API Key' : 'Anthropic API Key';
-}
-
-function saveAiProvider() {
-  const p = document.getElementById('aiProvider').value;
-  updateAiKeyLabel(p);
-  if (serverOnline) {
-    fetch(`${API}/settings`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ ai_provider: p })
-    });
-  }
-}
+function updateAiKeyLabel(p) { document.getElementById('aiKeyLabel').textContent = p === 'openai' ? 'OpenAI API Key' : 'Anthropic API Key'; }
+function saveAiProvider() { var p = document.getElementById('aiProvider').value; updateAiKeyLabel(p); if (serverOnline) fetch(API + '/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ai_provider:p})}); }
+function saveTempUnit() { tempUnit = document.getElementById('tempUnit').value; if (serverOnline) fetch(API + '/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({temp_unit:tempUnit})}); }
 
 async function saveApiKey() {
-  const provider = document.getElementById('aiProvider').value;
-  const key = document.getElementById('aiKeyInput').value.trim();
-  if (!key) return;
-
-  const payload = { ai_provider: provider };
-  if (provider === 'openai') payload.openai_key = key;
-  else payload.anthropic_key = key;
-
-  if (serverOnline) {
-    await fetch(`${API}/settings`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
-    });
-  }
-
+  var provider = document.getElementById('aiProvider').value;
+  var key = document.getElementById('aiKeyInput').value.trim(); if (!key) return;
+  var payload = {ai_provider: provider}; if (provider === 'openai') payload.openai_key = key; else payload.anthropic_key = key;
+  if (serverOnline) await fetch(API + '/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
   document.getElementById('aiKeyInput').value = '';
-  document.getElementById('aiKeyStatus').textContent = '✓ Key saved';
-  setTimeout(() => document.getElementById('aiKeyStatus').textContent = '', 3000);
+  document.getElementById('aiKeyStatus').textContent = 'Key saved';
+  setTimeout(function() { document.getElementById('aiKeyStatus').textContent = ''; }, 3000);
 }
 
 async function saveFellowCreds() {
-  const email    = document.getElementById('fellowEmail').value.trim();
-  const password = document.getElementById('fellowPassword').value.trim();
+  var email = document.getElementById('fellowEmail').value.trim();
+  var password = document.getElementById('fellowPassword').value.trim();
   if (!email || !password) { alert('Both fields required.'); return; }
-
-  if (serverOnline) {
-    await fetch(`${API}/settings`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ fellow_email: email, fellow_password: password })
-    });
-  }
-
-  document.getElementById('fellowEmail').value = '';
-  document.getElementById('fellowPassword').value = '';
+  if (serverOnline) await fetch(API + '/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({fellow_email:email, fellow_password:password})});
+  document.getElementById('fellowEmail').value = ''; document.getElementById('fellowPassword').value = '';
   loadSettings();
 }
 
-// ─── Preset manager ────────────────────────────────────────────
 function renderPresetManager() {
-  const el = document.getElementById('presetManager');
-  if (!presets.length) { el.innerHTML = '<p class="text-muted">No presets.</p>'; return; }
-  el.innerHTML = presets.map(p => `
-    <div class="preset-row">
-      <span class="preset-name">${p.name}</span>
-      <span class="preset-meta">${p.oz}oz / ${p.grams}g</span>
-      <button class="btn btn-danger btn-sm" onclick="deletePreset(${p.id})">✕</button>
-    </div>
-  `).join('');
+  var el = document.getElementById('presetManager');
+  if (!presets.length) { el.textContent = ''; var p = document.createElement('p'); p.className = 'text-muted'; p.textContent = 'No presets.'; el.appendChild(p); return; }
+  el.textContent = '';
+  presets.forEach(function(p) {
+    var row = document.createElement('div'); row.className = 'preset-row';
+    var name = document.createElement('span'); name.className = 'preset-name'; name.textContent = p.name;
+    var meta = document.createElement('span'); meta.className = 'preset-meta'; meta.textContent = p.oz + 'oz';
+    var del = document.createElement('button'); del.className = 'btn btn-danger btn-sm'; del.textContent = 'x';
+    del.onclick = function() { deletePreset(p.id); };
+    row.appendChild(name); row.appendChild(meta); row.appendChild(del);
+    el.appendChild(row);
+  });
 }
 
-function openAddPreset() {
-  document.getElementById('addPresetModal').classList.add('open');
-}
+function openAddPreset() { document.getElementById('addPresetModal').classList.add('open'); }
 
 async function saveNewPreset() {
-  const name  = document.getElementById('newPresetName').value.trim();
-  const oz    = parseFloat(document.getElementById('newPresetOz').value);
-  const grams = parseFloat(document.getElementById('newPresetGrams').value);
+  var name = document.getElementById('newPresetName').value.trim();
+  var oz = parseFloat(document.getElementById('newPresetOz').value);
   if (!name) { alert('Name required'); return; }
-
-  if (serverOnline) {
-    await fetch(`${API}/presets`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ name, oz, grams })
-    });
-  } else {
-    presets.push({ id: Date.now(), name, oz, grams });
-  }
-
-  closeModal('addPresetModal');
-  await loadPresets();
+  if (serverOnline) await fetch(API + '/presets', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name:name, oz:oz})});
+  else presets.push({id: Date.now(), name:name, oz:oz});
+  closeModal('addPresetModal'); await loadPresets();
 }
 
 async function deletePreset(id) {
   if (!confirm('Delete this preset?')) return;
-  if (serverOnline) await fetch(`${API}/presets/${id}`, { method: 'DELETE' });
-  presets = presets.filter(p => p.id !== id);
-  renderPresetChips();
-  renderPresetManager();
+  if (serverOnline) await fetch(API + '/presets/' + id, {method:'DELETE'});
+  presets = presets.filter(function(p) { return p.id !== id; });
+  renderPresetChips(); renderPresetManager();
 }
 
-function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
-}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(function(m) { m.addEventListener('click', function(e) { if (e.target === m) m.classList.remove('open'); }); });
 
-document.querySelectorAll('.modal-overlay').forEach(m =>
-  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); })
-);
-
-// ─── Init ──────────────────────────────────────────────────────
 (async function init() {
   await checkServer();
-  await loadPresets();
-  updateBrewRatio();
+  await Promise.all([loadPresets(), loadEquipment()]);
   setInterval(checkServer, 15000);
 })();
 </script>

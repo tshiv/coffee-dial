@@ -1,6 +1,7 @@
 backend/settings.json
 backend/coffee_dial.db
 backend/__pycache__/
+backend/venv/
 *.pyc
 .env
 .DS_Store
