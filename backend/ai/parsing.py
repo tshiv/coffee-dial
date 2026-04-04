@@ -31,25 +31,31 @@ Rules:
 - Always return valid JSON, nothing else"""
 
 
-def call_ai(prompt, settings):
+def call_ai_with_prompt(user_prompt, system_prompt, settings):
+    """Generic AI call with a custom system prompt. Returns (parsed_json, error_string)."""
     provider = settings.get("ai_provider", "anthropic")
 
     if provider == "openai" and settings.get("openai_key"):
-        return _call_openai(prompt, settings["openai_key"])
+        return _call_openai(user_prompt, settings["openai_key"], system_prompt)
     elif settings.get("anthropic_key"):
-        return _call_anthropic(prompt, settings["anthropic_key"])
+        return _call_anthropic(user_prompt, settings["anthropic_key"], system_prompt)
     elif settings.get("openai_key"):
-        return _call_openai(prompt, settings["openai_key"])
+        return _call_openai(user_prompt, settings["openai_key"], system_prompt)
     else:
         return None, "No AI API key configured. Add one in Settings."
 
 
-def _call_anthropic(prompt, api_key):
+def call_ai(prompt, settings):
+    """Parse coffee bag text using the coffee parsing system prompt."""
+    return call_ai_with_prompt(prompt, SYSTEM_PROMPT, settings)
+
+
+def _call_anthropic(prompt, api_key, system_prompt=SYSTEM_PROMPT):
     try:
         payload = json.dumps({
             "model": "claude-haiku-4-5-20251001",
             "max_tokens": 1024,
-            "system": SYSTEM_PROMPT,
+            "system": system_prompt,
             "messages": [{"role": "user", "content": prompt}]
         }).encode()
 
@@ -73,12 +79,12 @@ def _call_anthropic(prompt, api_key):
         return None, f"Anthropic API error: {str(e)}"
 
 
-def _call_openai(prompt, api_key):
+def _call_openai(prompt, api_key, system_prompt=SYSTEM_PROMPT):
     try:
         payload = json.dumps({
             "model": "gpt-4o-mini",
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
             ],
             "response_format": {"type": "json_object"},

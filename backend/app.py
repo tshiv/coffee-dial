@@ -29,8 +29,11 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
 from ai.parsing import call_ai
+from ai.recipe_search import search_roaster_recipe
 from engine.recommend import build_recommendation
 from equipment.loader import get_grinder, get_brewer, list_equipment
+from community.loader import search_recipes, scale_recipe
+from community.brewlink import fetch_brewlink_profile, brewlink_to_community_recipe
 
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
 
@@ -469,6 +472,58 @@ def push_aiden():
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+
+# ─── Community Recipes ───────────────────────────────────────────────────────────
+
+@app.route("/api/community-recipes", methods=["GET"])
+def get_community_recipes_api():
+    brewer_id = request.args.get("brewer_id")
+    brew_method = request.args.get("brew_method")
+    oz = request.args.get("oz", type=float)
+
+    recipes = search_recipes(brewer_id=brewer_id, brew_method=brew_method)
+
+    if oz:
+        water_g = oz * 29.5735
+        recipes = [scale_recipe(r, water_g) for r in recipes]
+
+    return jsonify(recipes)
+
+
+@app.route("/api/search-roaster-recipe", methods=["POST"])
+def search_roaster_recipe_api():
+    data = request.json or {}
+    roaster = (data.get("roaster") or "").strip()
+    coffee_name = (data.get("coffee_name") or "").strip()
+    brew_method = (data.get("brew_method") or "").strip()
+    brewer_name = (data.get("brewer_name") or "").strip()
+
+    if not roaster:
+        return jsonify({"error": "roaster name required"}), 400
+
+    settings = load_settings()
+    result, err = search_roaster_recipe(roaster, coffee_name, brew_method, brewer_name, settings)
+    if err:
+        return jsonify({"error": err}), 500
+
+    return jsonify(result)
+
+
+@app.route("/api/import-brew-link", methods=["POST"])
+def import_brew_link():
+    data = request.json or {}
+    link = (data.get("link") or "").strip()
+    if not link:
+        return jsonify({"error": "link required"}), 400
+
+    settings = load_settings()
+    profile, err = fetch_brewlink_profile(link, settings)
+    if err:
+        return jsonify({"error": err}), 500
+
+    recipe = brewlink_to_community_recipe(profile)
+    return jsonify(recipe)
 
 
 # ─── Frontend ───────────────────────────────────────────────────────────────────

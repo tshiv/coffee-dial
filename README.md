@@ -83,16 +83,9 @@ python app.py
 
 The backend runs at `http://localhost:8765`.
 
-### 3. Frontend
+### 3. Open the app
 
-Open `frontend/index.html` in your browser. No build step.
-
-Or serve it:
-
-```bash
-cd frontend
-python -m http.server 3000
-```
+Navigate to `http://localhost:8765` — Flask serves both the backend API and the frontend.
 
 ### 4. Add your API key
 
@@ -118,9 +111,25 @@ Temperature displays in Fahrenheit by default (changeable in Settings).
 
 ---
 
+## Community Recipes
+
+Coffee Dial includes curated community recipes from well-known coffee experts alongside the engine's personalized recommendation. After generating a recommendation, you'll see matching community recipes you can use instead.
+
+### Sources
+
+- **Curated recipes** — Hoffmann V60, Kasuya 4:6, Rao V60, and more, stored in `backend/community/recipes.json`
+- **AI roaster search** — Ask AI for a specific roaster's brew guide (e.g., "Counter Culture Hologram on V60")
+- **Brew.link import** — Paste a Fellow brew.link URL to import shared Aiden profiles
+
+### Attribution
+
+Community recipes credit their original authors and link to source material. AI-searched recipes show a confidence badge indicating how certain the AI is about the recommendation.
+
+---
+
 ## Aiden Push
 
-For Fellow Aiden owners: the app can push brew profiles directly to your Aiden via the [9b/fellow-aiden](https://github.com/9b/fellow-aiden) library. Add your Fellow credentials in Settings.
+For Fellow Aiden owners: the app can push brew profiles directly to your Aiden via the [9b/fellow-aiden](https://github.com/9b/fellow-aiden) library. Add your Fellow credentials in Settings. Community recipes with Aiden profiles can also be pushed directly.
 
 ---
 
@@ -129,9 +138,10 @@ For Fellow Aiden owners: the app can push brew profiles directly to your Aiden v
 ```
 coffee-dial/
   backend/
-    app.py                  # Flask routes
+    app.py                  # Flask routes + frontend serving
     ai/
       parsing.py            # AI provider integration
+      recipe_search.py      # AI-powered roaster recipe search
     engine/
       recommend.py          # Recommendation pipeline
       grind.py              # Micron targeting + grinder translation
@@ -141,18 +151,23 @@ coffee-dial/
       grinders.json         # Grinder catalog (add yours here!)
       brewers.json          # Brewer catalog
       loader.py             # Equipment loading
+    community/
+      recipes.json          # Curated community recipes (add yours!)
+      loader.py             # Recipe search + scaling
+      brewlink.py           # Fellow brew.link import
   frontend/
     index.html              # Single-file frontend (no build step)
 ```
 
 ## Contributing
 
-The easiest way to contribute is improving the equipment data:
+The easiest ways to contribute:
 
 - **`backend/equipment/grinders.json`** — Add a grinder or correct micron maps
 - **`backend/equipment/brewers.json`** — Add a brewer or adjust grind ranges
+- **`backend/community/recipes.json`** — Add a community brew recipe with attribution
 
-Adding a new grinder is just a JSON entry — no Python code changes needed. Adding a new brewer that uses an existing recipe type (pour-over, immersion, etc.) is also just JSON.
+Adding a new grinder is just a JSON entry — no Python code changes needed. Adding a new brewer that uses an existing recipe type (pour-over, immersion, etc.) is also just JSON. Adding a community recipe is also just a JSON entry with author and source URL.
 
 ---
 
@@ -165,10 +180,11 @@ Adding a new grinder is just a JSON entry — no Python code changes needed. Add
 
 ---
 
-## Related projects
+## Related projects & inspirations
 
-- [9b/fellow-aiden](https://github.com/9b/fellow-aiden) — Python library + Brew Studio
-- [Beanconqueror](https://github.com/graphefruit/Beanconqueror) — open source coffee tracking mobile app
+- [9b/fellow-aiden](https://github.com/9b/fellow-aiden) — Python library + Brew Studio for Fellow Aiden
+- [Timer.Coffee](https://github.com/antonkarliner/timer-coffee) — open source brew timer with community recipes (inspiration for the community recipes feature)
+- [Beanconqueror](https://github.com/graphefruit/Beanconqueror) — open source coffee tracking mobile app (excellent data model reference)
 - [brewshare.coffee](https://brewshare.coffee) — community Aiden profile browser
 
 ---
