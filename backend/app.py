@@ -425,24 +425,28 @@ def push_aiden():
 
         fa = FellowAiden(email, password)
 
+        # Normalize field names: accept both engine snake_case and Fellow camelCase
+        def _get(engine_key, fellow_key, default):
+            return rec.get(engine_key, rec.get(fellow_key, default))
+
         # Snap ratio to Aiden's allowed values (14–20 in 0.5 steps)
-        raw_ratio = rec.get("ratio", 16)
+        raw_ratio = _get("ratio", "ratio", 16)
         ratio = round(raw_ratio * 2) / 2  # nearest 0.5
         ratio = max(14.0, min(20.0, ratio))
 
         # Snap bloom ratio (1–3 in 0.5 steps)
-        raw_bloom = rec.get("bloom_ratio", 2.5)
+        raw_bloom = _get("bloom_ratio", "bloomRatio", 2.5)
         bloom_ratio = round(raw_bloom * 2) / 2
         bloom_ratio = max(1.0, min(3.0, bloom_ratio))
 
         # Temps must be Celsius, snapped to 0.5, range 50–99
-        raw_temp = rec.get("temp_c", 94)
+        raw_temp = _get("temp_c", "bloomTemperature", 94)
         temp_c = round(raw_temp * 2) / 2
         temp_c = max(50.0, min(99.0, temp_c))
 
-        pulses = max(1, min(10, rec.get("pulses", 1)))
-        bloom_dur = max(1, min(120, rec.get("bloom_dur", 40)))
-        pulse_int = max(5, min(60, rec.get("pulse_int", 25)))
+        pulses = max(1, min(10, _get("pulses", "ssPulsesNumber", 1)))
+        bloom_dur = max(1, min(120, _get("bloom_dur", "bloomDuration", 40)))
+        pulse_int = max(5, min(60, _get("pulse_int", "ssPulsesInterval", 25)))
 
         profile = {
             "profileType": 0,
