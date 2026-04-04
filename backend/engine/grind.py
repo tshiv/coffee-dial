@@ -19,12 +19,26 @@ GRIND_TARGETS = {
     ("medium-dark", "percolation"):  775,
     ("dark", "percolation"):         850,
 
-    # Immersion (French Press, Clever Dripper)
+    # Immersion (French Press)
     ("light", "immersion"):        850,
     ("medium-light", "immersion"): 925,
     ("medium", "immersion"):       1000,
     ("medium-dark", "immersion"):  1050,
     ("dark", "immersion"):         1100,
+
+    # Immersion-fine (AeroPress — pressure immersion, finer grind)
+    ("light", "immersion_fine"):        400,
+    ("medium-light", "immersion_fine"): 430,
+    ("medium", "immersion_fine"):       460,
+    ("medium-dark", "immersion_fine"):  500,
+    ("dark", "immersion_fine"):         540,
+
+    # Immersion-filtered (Clever Dripper — paper-filtered immersion, medium grind)
+    ("light", "immersion_filtered"):        550,
+    ("medium-light", "immersion_filtered"): 600,
+    ("medium", "immersion_filtered"):       650,
+    ("medium-dark", "immersion_filtered"):  700,
+    ("dark", "immersion_filtered"):         750,
 }
 
 # Micron offsets for origin (replaces the old grind_bias system)
