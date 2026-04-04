@@ -220,7 +220,7 @@ def post_user_equipment():
         conn.execute(
             """INSERT INTO user_equipment (equipment_type, equipment_id, is_default, added_at)
                VALUES (?, ?, ?, ?)
-               ON CONFLICT DO NOTHING""",
+               ON CONFLICT(equipment_type, equipment_id) DO UPDATE SET is_default = excluded.is_default""",
             (eq_type, eq_id, is_default, int(time.time() * 1000))
         )
         conn.commit()

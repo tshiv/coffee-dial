@@ -106,9 +106,10 @@ def build_pour_over_steps(brewer, coffee_data, target_microns, dose_g, water_g):
     bloom = _bloom_params(coffee_data)
     bloom_water = round(dose_g * bloom["bloom_ratio"])
 
-    remaining = water_g - bloom_water
+    total_water = round(water_g)
+    remaining = total_water - bloom_water
     pour_1 = round(remaining * 0.55)
-    pour_2 = round(remaining * 0.45)
+    pour_2 = remaining - pour_1
 
     steps = [
         {"action": "bloom", "water_g": bloom_water, "duration_s": bloom["bloom_dur"],
@@ -117,7 +118,7 @@ def build_pour_over_steps(brewer, coffee_data, target_microns, dose_g, water_g):
          "note": f"Slow spiral pour {pour_1}g (total: {bloom_water + pour_1}g)."},
         {"action": "wait", "duration_s": 15, "note": "Let water draw down slightly."},
         {"action": "pour", "water_g": pour_2, "duration_s": 25,
-         "note": f"Final pour {pour_2}g to reach {round(water_g)}g total."},
+         "note": f"Final pour {pour_2}g to reach {total_water}g total."},
     ]
 
     return {
@@ -126,7 +127,7 @@ def build_pour_over_steps(brewer, coffee_data, target_microns, dose_g, water_g):
         "temp_f": _c_to_f(temp_c),
         "ratio": ratio,
         "dose_g": round(dose_g, 1),
-        "water_g": round(water_g),
+        "water_g": total_water,
         "steps": steps,
         "target_total_time_s": bloom["bloom_dur"] + 30 + 15 + 25 + 60,
     }
