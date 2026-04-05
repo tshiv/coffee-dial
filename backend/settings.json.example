@@ -1,0 +1,8 @@
+{
+  "ai_provider": "anthropic",
+  "anthropic_key": "sk-ant-...",
+  "openai_key": "sk-...",
+  "temp_unit": "F",
+  "fellow_email": "",
+  "fellow_password": ""
+}

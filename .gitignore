@@ -1,7 +1,32 @@
+# Credentials & local config
 backend/settings.json
+.env
+
+# Database
 backend/coffee_dial.db
+*.db
+*.sqlite3
+
+# Python
 backend/__pycache__/
 backend/venv/
+__pycache__/
 *.pyc
-.env
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Node (if any tooling is added later)
+node_modules/

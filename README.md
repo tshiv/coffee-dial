@@ -1,6 +1,6 @@
 # Coffee Dial
 
-**Open source bag-to-cup brew assistant.** AI-powered grind settings and brew recipes for 11 grinders and 21 brewers.
+**Open source bag-to-cup brew assistant.** AI-powered grind settings and brew recipes for 11 grinders and 21 brewers, plus 13 curated community recipes from coffee experts.
 
 Built for coffee snobs on rotating subscriptions (e.g. [Bottomless](https://www.bottomless.com)) who want dialed-in settings for every new bag without guesswork.
 
@@ -13,7 +13,8 @@ Built for coffee snobs on rotating subscriptions (e.g. [Bottomless](https://www.
 3. **Pick your equipment** — grinder + brewer from the catalog
 4. **Tell it how much** — just ounces, the engine computes dose and ratio
 5. **Get a complete recipe** — grind setting for your specific grinder + method-specific brew instructions
-6. **Rate the cup** → app adjusts future recommendations based on your history
+6. **Browse community recipes** — see matching recipes from Hoffmann, Rao, Kasuya, and others alongside the engine's recommendation
+7. **Rate the cup** → app adjusts future recommendations based on your history
 
 ---
 
@@ -49,7 +50,7 @@ Built for coffee snobs on rotating subscriptions (e.g. [Bottomless](https://www.
 
 Every grinder produces a particle size in microns. Every brewer has an ideal micron range. The recommendation engine:
 
-1. Determines a **target micron value** based on roast level + brew method (percolation vs immersion)
+1. Determines a **target micron value** based on roast level + extraction type (percolation, immersion, immersion-fine for AeroPress, immersion-filtered for Clever Dripper)
 2. Applies **offsets** for origin, process, batch size, and your brew history
 3. **Translates** the target to your grinder's specific setting via interpolation
 4. **Generates a recipe** appropriate for your brewer (step-by-step pour-over, steep time, Aiden profile, etc.)
@@ -77,15 +78,19 @@ cd coffee-dial
 
 ```bash
 cd backend
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 python app.py
 ```
 
-The backend runs at `http://localhost:8765`.
+> **macOS note:** A virtual environment is required on modern macOS due to [PEP 668](https://peps.python.org/pep-0668/) (externally-managed Python). The commands above handle this.
+
+The server runs at `http://localhost:8765`.
 
 ### 3. Open the app
 
-Navigate to `http://localhost:8765` — Flask serves both the backend API and the frontend.
+Navigate to `http://localhost:8765` — Flask serves both the API and the frontend from a single port. No separate frontend server needed.
 
 ### 4. Add your API key
 
@@ -113,23 +118,33 @@ Temperature displays in Fahrenheit by default (changeable in Settings).
 
 ## Community Recipes
 
-Coffee Dial includes curated community recipes from well-known coffee experts alongside the engine's personalized recommendation. After generating a recommendation, you'll see matching community recipes you can use instead.
+Coffee Dial shows curated community recipes from well-known coffee experts alongside the engine's personalized recommendation. After generating a recommendation, you'll see matching recipes you can use instead — or combine with the engine's grind setting.
 
-### Sources
+### 13 curated recipes
 
-- **Curated recipes** — Hoffmann V60, Kasuya 4:6, Rao V60, and more, stored in `backend/community/recipes.json`
-- **AI roaster search** — Ask AI for a specific roaster's brew guide (e.g., "Counter Culture Hologram on V60")
-- **Brew.link import** — Paste a Fellow brew.link URL to import shared Aiden profiles
+Hoffmann V60/French Press/AeroPress, Kasuya 4:6, Rao V60, Adler AeroPress, Chemex Classic, Kalita Wave, Clever Dripper, Stagg Pour-Over, Aiden Light/Dark Roast defaults, and Moccamaster best practices.
+
+### AI roaster search
+
+Type a roaster and coffee name to search for roaster-specific brew recommendations via AI. Results show a confidence badge (high/medium/low) and are scaled to your brew size.
+
+### Brew.link import (Aiden)
+
+Paste a Fellow brew.link URL to import shared Aiden profiles directly. The imported profile can be pushed straight to your Aiden.
 
 ### Attribution
 
-Community recipes credit their original authors and link to source material. AI-searched recipes show a confidence badge indicating how certain the AI is about the recommendation.
+All community recipes credit their original authors and link to source material.
 
 ---
 
-## Aiden Push
+## Fellow Aiden Integration
 
-For Fellow Aiden owners: the app can push brew profiles directly to your Aiden via the [9b/fellow-aiden](https://github.com/9b/fellow-aiden) library. Add your Fellow credentials in Settings. Community recipes with Aiden profiles can also be pushed directly.
+For Fellow Aiden owners: the app can push brew profiles directly to your Aiden via the [9b/fellow-aiden](https://github.com/9b/fellow-aiden) library. Add your Fellow credentials in Settings.
+
+- **Engine profiles** — push the engine's recommendation directly
+- **Community profiles** — push curated Aiden recipes (light/dark roast defaults)
+- **Brew.link imports** — import and push shared profiles from Fellow's sharing URLs
 
 ---
 
@@ -173,9 +188,9 @@ Adding a new grinder is just a JSON entry — no Python code changes needed. Add
 
 ## Stack
 
-- **Frontend**: Vanilla HTML/CSS/JS, no framework, no build step
-- **Backend**: Python + Flask + SQLite
-- **AI**: Anthropic Claude Haiku or OpenAI GPT-4o-mini
+- **Frontend**: Vanilla HTML/CSS/JS — no framework, no build step, single file
+- **Backend**: Python 3 + Flask + SQLite
+- **AI**: Anthropic Claude Haiku or OpenAI GPT-4o-mini (for bag parsing and roaster recipe search)
 - **Aiden API**: [9b/fellow-aiden](https://github.com/9b/fellow-aiden)
 
 ---
