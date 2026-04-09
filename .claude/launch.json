@@ -10,7 +10,7 @@
     },
     {
       "name": "Coffee Dial",
-      "runtimeExecutable": "/Users/taylorshivers/Projects/coffee-dial/backend/venv/bin/python",
+      "runtimeExecutable": "python3",
       "runtimeArgs": ["app.py"],
       "port": 8765,
       "cwd": "backend"

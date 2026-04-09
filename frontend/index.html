@@ -541,6 +541,16 @@
     </div>
   </div>
 
+  <!-- ======== HISTORY ======== -->
+  <div class="view" id="view-history">
+    <div class="settings-header">
+      <h2>Brew History</h2>
+      <button class="done-btn" onclick="showView('settings')">Done</button>
+    </div>
+    <p class="text-muted" style="margin-bottom:14px;">Your brew log. Ratings influence future recommendations.</p>
+    <div id="historyList"><div class="history-empty">No brews yet.</div></div>
+  </div>
+
   <!-- ======== SETTINGS ======== -->
   <div class="view" id="view-settings">
     <div class="settings-header">
@@ -604,7 +614,10 @@
       <div class="card-title">Brew History</div>
       <div class="settings-row">
         <div><div class="settings-label">History</div><div class="settings-desc" id="historyCount">-</div></div>
-        <button class="btn btn-danger btn-sm" onclick="clearHistory()">Clear all</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-secondary btn-sm" onclick="showView('history')">View</button>
+          <button class="btn btn-danger btn-sm" onclick="clearHistory()">Clear all</button>
+        </div>
       </div>
     </div>
     <div class="card">
@@ -656,11 +669,12 @@ var tempUnit = 'F';
 var previousView = 'home';
 
 function showView(name) {
-  if (name !== 'settings') previousView = name;
+  if (name !== 'settings' && name !== 'history') previousView = name;
   document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
   document.getElementById('view-' + name).classList.add('active');
   if (name === 'settings') loadSettings();
   if (name === 'size') enterSizeScreen();
+  if (name === 'history') loadHistory();
   window.scrollTo(0, 0);
 }
 
