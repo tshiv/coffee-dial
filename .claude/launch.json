@@ -2,6 +2,13 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Coffee Dial Frontend",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8766"],
+      "port": 8766,
+      "cwd": "frontend"
+    },
+    {
       "name": "Coffee Dial",
       "runtimeExecutable": "python3",
       "runtimeArgs": ["app.py"],
