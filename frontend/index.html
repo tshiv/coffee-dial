@@ -1150,7 +1150,7 @@ async function loadHistory() {
 
 async function clearHistory() {
   if (!confirm('Clear all brew history?')) return;
-  if (serverOnline) { var r = await fetch(API + '/history'); var items = await r.json(); await Promise.all(items.map(function(i) { return fetch(API + '/history/' + i.id, {method:'DELETE'}); })); }
+  if (serverOnline) { await fetch(API + '/history', {method:'DELETE'}); }
   document.getElementById('historyCount').textContent = '0 brews saved';
 }
 
