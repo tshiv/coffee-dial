@@ -1,0 +1,26 @@
+.offline {
+  background: rgba(200, 106, 90, 0.15);
+  color: #c86a5a;
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+}
+
+.cta {
+  width: 100%;
+  background: var(--color-cta-bg);
+  color: var(--color-cta-text);
+  border: none;
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 14px;
+  margin-top: 24px;
+  cursor: pointer;
+}
+
+.ctaDisabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
