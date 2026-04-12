@@ -1,0 +1,65 @@
+.section {
+  margin-top: 32px;
+  border-top: 1px solid var(--color-border);
+  padding-top: 20px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--color-text-muted);
+  margin-bottom: 12px;
+}
+
+.ratings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ratingBtn {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.ratingBtn:hover {
+  border-color: var(--color-accent);
+}
+
+.ratingSelected {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.saveBtn {
+  margin-top: 12px;
+  width: 100%;
+  background: var(--color-cta-bg);
+  color: var(--color-cta-text);
+  border: none;
+  border-radius: var(--radius);
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.saveBtn:disabled {
+  opacity: 0.5;
+}
+
+.savedMsg {
+  font-size: 13px;
+  color: var(--color-green);
+  margin-top: 8px;
+  text-align: center;
+}
