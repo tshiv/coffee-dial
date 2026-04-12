@@ -1,0 +1,74 @@
+.backLink {
+  font-size: 13px;
+  color: var(--color-accent);
+  cursor: pointer;
+  display: inline-block;
+  margin-bottom: 16px;
+}
+
+.coffeeName {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--color-text);
+}
+
+.meta {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+}
+
+.notes {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--color-text-muted);
+  margin-top: 6px;
+}
+
+.context {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 8px;
+  margin-bottom: 20px;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 0;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--color-text-muted);
+  margin-top: 24px;
+  margin-bottom: 12px;
+}
+
+.startOverBtn {
+  width: 100%;
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius);
+  padding: 12px;
+  font-size: 14px;
+  margin-top: 32px;
+  cursor: pointer;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px 0;
+  color: var(--color-text-muted);
+}
+
+.error {
+  color: var(--color-red);
+  font-size: 13px;
+  margin-top: 12px;
+}

@@ -4,6 +4,7 @@ import { useApi } from './hooks/useApi';
 import { useEquipment } from './hooks/useEquipment';
 import { SetupView } from './views/SetupView';
 import { InputView } from './views/InputView';
+import { RecipeView } from './views/RecipeView';
 
 export function App() {
   const { theme, setTheme } = useTheme();
@@ -21,6 +22,13 @@ export function App() {
     );
   }
 
+  const handleBack = () => setView('input');
+  const handleStartOver = () => {
+    setCoffeeData(null);
+    setSelectedSize(0);
+    setView('input');
+  };
+
   return (
     <div class="app-shell">
       {view === 'input' && (
@@ -35,7 +43,18 @@ export function App() {
         />
       )}
       {view === 'recipe' && (
-        <p style={{ color: 'var(--color-text-muted)' }}>Recipe view placeholder</p>
+        <RecipeView
+          coffeeData={coffeeData}
+          brewOz={selectedSize}
+          grinderId={eq.grinderId}
+          grinderName={eq.grinderName}
+          brewerId={eq.brewerId}
+          brewerName={eq.brewerName}
+          tempUnit={api.tempUnit}
+          apiFetch={api.apiFetch}
+          onBack={handleBack}
+          onStartOver={handleStartOver}
+        />
       )}
       {view === 'settings' && (
         <p style={{ color: 'var(--color-text-muted)' }}>Settings view placeholder</p>
