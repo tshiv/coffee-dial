@@ -352,6 +352,13 @@ def delete_history(brew_id):
         conn.commit()
     return jsonify({"ok": True})
 
+@app.route("/api/history", methods=["DELETE"])
+def delete_all_history():
+    with get_db() as conn:
+        result = conn.execute("DELETE FROM brews")
+        conn.commit()
+    return jsonify({"ok": True, "deleted": result.rowcount})
+
 
 # ─── Presets ──────────────────────────────────────────────────────────────────
 
