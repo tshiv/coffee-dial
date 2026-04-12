@@ -1,0 +1,149 @@
+.backLink {
+  font-size: 13px;
+  color: var(--color-accent);
+  cursor: pointer;
+  display: inline-block;
+  margin-bottom: 16px;
+}
+
+.coffeeName {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--color-text);
+}
+
+.meta {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+}
+
+.notes {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--color-text-muted);
+  margin-top: 6px;
+}
+
+.context {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 8px;
+  margin-bottom: 20px;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 0;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--color-text-muted);
+  margin-top: 24px;
+  margin-bottom: 12px;
+}
+
+.startOverBtn {
+  width: 100%;
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius);
+  padding: 12px;
+  font-size: 14px;
+  margin-top: 32px;
+  cursor: pointer;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px 0;
+  color: var(--color-text-muted);
+}
+
+.error {
+  color: var(--color-red);
+  font-size: 13px;
+  margin-top: 12px;
+}
+
+.communitySection {
+  margin-top: 24px;
+}
+
+.recipeCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.recipeCardTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.recipeCardAuthor {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.recipeCardParams {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.useBtn {
+  margin-top: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.useBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.searchRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.importRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.searchInput {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 13px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.importStatus {
+  font-size: 12px;
+  margin-top: 8px;
+}

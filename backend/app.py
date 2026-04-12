@@ -37,7 +37,7 @@ from community.brewlink import fetch_brewlink_profile, brewlink_to_community_rec
 
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
 
-app = Flask(__name__, static_folder=FRONTEND_DIR)
+app = Flask(__name__, static_folder=os.path.join(FRONTEND_DIR, "dist"))
 CORS(app)
 
 DB_PATH = os.environ.get("COFFEE_DIAL_DB", os.path.join(os.path.dirname(__file__), "coffee_dial.db"))
@@ -541,12 +541,12 @@ def import_brew_link():
 
 @app.route("/")
 def serve_frontend():
-    return send_from_directory(FRONTEND_DIR, "index.html")
+    return send_from_directory(os.path.join(FRONTEND_DIR, "dist"), "index.html")
 
 
 @app.route("/<path:path>")
 def serve_static(path):
-    return send_from_directory(FRONTEND_DIR, path)
+    return send_from_directory(os.path.join(FRONTEND_DIR, "dist"), path)
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────

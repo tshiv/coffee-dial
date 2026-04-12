@@ -1,0 +1,24 @@
+:root {
+  --color-bg: #FAF7F2;
+  --color-surface: #F3EDE4;
+  --color-border: #E4D9CB;
+  --color-text: #2C1E12;
+  --color-text-secondary: #6B5744;
+  --color-text-muted: #9B8B7A;
+  --color-accent: #C8854A;
+  --color-cta-bg: #3C2A1A;
+  --color-cta-text: #F3EDE4;
+  --color-tag-bg: #E8DFD1;
+  --color-tag-text: #6B5744;
+  --color-green: #6ab87a;
+  --color-red: #c86a5a;
+  --color-yellow: #d4a84b;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 12px;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+
+  --max-width: 520px;
+}

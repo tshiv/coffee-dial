@@ -1,0 +1,80 @@
+.identity {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.badgeHigh {
+  background: var(--color-green);
+  color: #fff;
+}
+
+.badgeMedium {
+  background: var(--color-yellow);
+  color: #2C1E12;
+}
+
+.badgeLow {
+  background: var(--color-red);
+  color: #fff;
+}
+
+.roaster {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin: 4px 0 0;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tag {
+  background: var(--color-tag-bg);
+  color: var(--color-tag-text);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.notes {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--color-text-muted);
+  margin: 8px 0 0;
+}
+
+.reasoning {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
