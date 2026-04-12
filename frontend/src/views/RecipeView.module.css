@@ -72,3 +72,78 @@
   font-size: 13px;
   margin-top: 12px;
 }
+
+.communitySection {
+  margin-top: 24px;
+}
+
+.recipeCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.recipeCardTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.recipeCardAuthor {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.recipeCardParams {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.useBtn {
+  margin-top: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.useBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.searchRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.importRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.searchInput {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 13px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.importStatus {
+  font-size: 12px;
+  margin-top: 8px;
+}
