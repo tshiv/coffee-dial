@@ -5,12 +5,15 @@ import { useEquipment } from './hooks/useEquipment';
 import { SetupView } from './views/SetupView';
 import { InputView } from './views/InputView';
 import { RecipeView } from './views/RecipeView';
+import { SettingsView } from './views/SettingsView';
+import { HistoryView } from './views/HistoryView';
 
 export function App() {
   const { theme, setTheme } = useTheme();
   const api = useApi();
   const eq = useEquipment(api.apiFetch, api.serverOnline);
   const [view, setView] = useState('input');
+  const [previousView, setPreviousView] = useState('input');
   const [coffeeData, setCoffeeData] = useState(null);
   const [selectedSize, setSelectedSize] = useState(0);
 
@@ -21,6 +24,11 @@ export function App() {
       </div>
     );
   }
+
+  const navigate = (target) => {
+    setPreviousView(view);
+    setView(target);
+  };
 
   const handleBack = () => setView('input');
   const handleStartOver = () => {
@@ -35,7 +43,7 @@ export function App() {
         <InputView
           api={api}
           equipment={eq}
-          onNavigate={setView}
+          onNavigate={navigate}
           coffeeData={coffeeData}
           setCoffeeData={setCoffeeData}
           selectedSize={selectedSize}
@@ -57,7 +65,20 @@ export function App() {
         />
       )}
       {view === 'settings' && (
-        <p style={{ color: 'var(--color-text-muted)' }}>Settings view placeholder</p>
+        <SettingsView
+          api={api}
+          equipment={eq}
+          theme={theme}
+          setTheme={setTheme}
+          onDone={() => setView(previousView)}
+          onViewHistory={() => navigate('history')}
+        />
+      )}
+      {view === 'history' && (
+        <HistoryView
+          apiFetch={api.apiFetch}
+          onDone={() => setView('settings')}
+        />
       )}
     </div>
   );
