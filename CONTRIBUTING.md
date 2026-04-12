@@ -32,20 +32,35 @@ Edit `backend/community/recipes.json`. Include:
 
 ```bash
 git clone https://github.com/tshiv/coffee-dial
-cd coffee-dial/backend
+cd coffee-dial
+
+# Backend
+cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 cp settings.json.example settings.json  # add your API keys
-python app.py
+python app.py                           # API on :8765
+
+# Frontend (separate terminal)
+cd frontend
+npm install
+npm run dev                             # Vite dev server on :5173
 ```
 
-Open `http://localhost:8765`.
+For development, open `http://localhost:5173` — Vite proxies API calls to the backend. For production, run `npm run build` and open `http://localhost:8765` — Flask serves the built frontend.
+
+## Frontend
+
+The frontend is built with Preact + Vite + CSS Modules. Components live in `frontend/src/components/`, views in `frontend/src/views/`, hooks in `frontend/src/hooks/`. The design system uses CSS custom properties defined in `frontend/src/theme/`.
+
+Run `npm run build` in `frontend/` before submitting a PR that touches frontend code — the build must pass cleanly.
 
 ## Pull Requests
 
 - One feature or fix per PR
 - Test that the app starts and your changes work end-to-end
+- If touching frontend code, verify `npm run build` passes
 - If adding equipment, include your source for micron values in the PR description
 - If adding recipes, include attribution and a link to the original source
 

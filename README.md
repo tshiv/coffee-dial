@@ -86,11 +86,26 @@ python app.py
 
 > **macOS note:** A virtual environment is required on modern macOS due to [PEP 668](https://peps.python.org/pep-0668/) (externally-managed Python). The commands above handle this.
 
-The server runs at `http://localhost:8765`.
+The API server runs at `http://localhost:8765`.
 
-### 3. Open the app
+### 3. Frontend
 
-Navigate to `http://localhost:8765` — Flask serves both the API and the frontend from a single port. No separate frontend server needed.
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+For production, Flask serves the built frontend from `frontend/dist/` — navigate to `http://localhost:8765`.
+
+For development, run the Vite dev server alongside the backend:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Vite starts at `http://localhost:5173` and proxies `/api` requests to the backend on port 8765.
 
 ### 4. Add your API key
 
@@ -153,7 +168,7 @@ For Fellow Aiden owners: the app can push brew profiles directly to your Aiden v
 ```
 coffee-dial/
   backend/
-    app.py                  # Flask routes + frontend serving
+    app.py                  # Flask API + static serving from frontend/dist
     ai/
       parsing.py            # AI provider integration
       recipe_search.py      # AI-powered roaster recipe search
@@ -161,7 +176,6 @@ coffee-dial/
       recommend.py          # Recommendation pipeline
       grind.py              # Micron targeting + grinder translation
       recipes.py            # Recipe builders per brew method
-      adjustments.py        # Origin/process/volume offsets
     equipment/
       grinders.json         # Grinder catalog (add yours here!)
       brewers.json          # Brewer catalog
@@ -171,7 +185,21 @@ coffee-dial/
       loader.py             # Recipe search + scaling
       brewlink.py           # Fellow brew.link import
   frontend/
-    index.html              # Single-file frontend (no build step)
+    package.json            # Preact + Vite
+    vite.config.js          # Dev server + API proxy
+    index.html              # Vite entry point
+    src/
+      main.jsx              # App entry
+      app.jsx               # Root component + view routing
+      theme/                # CSS custom properties, light/dark modes
+      hooks/                # useApi, useEquipment, useTheme, useTimer
+      lib/                  # Format helpers (temp, time)
+      components/           # Header, CoffeeSearch, CoffeeIdentity,
+                            # SizePicker, RecipeCard, AidenProfile,
+                            # PourOverSteps, BrewTimer, SimpleDrip,
+                            # RatingRow
+      views/                # SetupView, InputView, RecipeView,
+                            # SettingsView, HistoryView
 ```
 
 ## Contributing
@@ -188,7 +216,7 @@ Adding a new grinder is just a JSON entry — no Python code changes needed. Add
 
 ## Stack
 
-- **Frontend**: Vanilla HTML/CSS/JS — no framework, no build step, single file
+- **Frontend**: Preact + Vite + CSS Modules — component architecture with warm parchment design system, light/dark mode, brew timer
 - **Backend**: Python 3 + Flask + SQLite
 - **AI**: Anthropic Claude Haiku or OpenAI GPT-4o-mini (for bag parsing and roaster recipe search)
 - **Aiden API**: [9b/fellow-aiden](https://github.com/9b/fellow-aiden)
