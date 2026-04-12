@@ -1,7 +1,12 @@
 import { useState } from 'preact/hooks';
 import styles from './RatingRow.module.css';
 
-const RATINGS = ['Too Bitter', 'Too Bright', 'Flat/Weak', 'Just Right'];
+const RATINGS = [
+  { label: 'Too Bitter', value: 'bitter' },
+  { label: 'Too Bright', value: 'bright' },
+  { label: 'Flat/Weak', value: 'flat' },
+  { label: 'Just Right', value: 'good' },
+];
 
 export function RatingRow({ brewData, apiFetch }) {
   const [selected, setSelected] = useState(null);
@@ -13,7 +18,7 @@ export function RatingRow({ brewData, apiFetch }) {
     try {
       await apiFetch('/history', {
         method: 'POST',
-        body: JSON.stringify({ ...brewData, rating: selected }),
+        body: JSON.stringify({ ...brewData, rating: selected.value }),
       });
       setSaveStatus('saved');
     } catch {
@@ -27,11 +32,11 @@ export function RatingRow({ brewData, apiFetch }) {
       <div class={styles.ratings}>
         {RATINGS.map(r => (
           <button
-            key={r}
-            class={`${styles.ratingBtn} ${selected === r ? styles.ratingSelected : ''}`}
+            key={r.value}
+            class={`${styles.ratingBtn} ${selected?.value === r.value ? styles.ratingSelected : ''}`}
             onClick={() => { setSelected(r); setSaveStatus('idle'); }}
           >
-            {r}
+            {r.label}
           </button>
         ))}
       </div>

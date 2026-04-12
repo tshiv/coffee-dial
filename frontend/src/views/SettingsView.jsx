@@ -43,10 +43,14 @@ export function SettingsView({ api, equipment, theme, setTheme, onDone, onViewHi
     }).catch(() => {});
   };
 
-  const clearHistory = () => {
-    api.apiFetch('/history', { method: 'DELETE' }).then(() => {
+  const clearHistory = async () => {
+    try {
+      await Promise.all(history.map(h => api.apiFetch(`/history/${h.id}`, { method: 'DELETE' })));
       setHistory([]);
-    }).catch(() => {});
+    } catch {
+      // partial clear — reload
+      api.apiFetch('/history').then(setHistory).catch(() => {});
+    }
   };
 
   return (
@@ -133,8 +137,8 @@ export function SettingsView({ api, equipment, theme, setTheme, onDone, onViewHi
             class={styles.input}
             type="password"
             placeholder="sk-..."
-            value={settings.api_key || ''}
-            onChange={(e) => saveSetting('api_key', e.target.value)}
+            value={settings[(settings.ai_provider || 'anthropic') + '_key'] || ''}
+            onChange={(e) => saveSetting((settings.ai_provider || 'anthropic') + '_key', e.target.value)}
           />
         </div>
       </div>

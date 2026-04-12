@@ -26,10 +26,10 @@ export function RecipeView({ coffeeData, brewOz, grinderId, grinderName, brewerI
     apiFetch('/recommend', {
       method: 'POST',
       body: JSON.stringify({
-        coffee: coffeeData,
+        coffee_data: coffeeData,
         grinder_id: grinderId,
         brewer_id: brewerId,
-        brew_oz: brewOz,
+        oz: brewOz,
       }),
     })
       .then(data => { setRec(data); setLoading(false); })

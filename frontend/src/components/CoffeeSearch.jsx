@@ -32,7 +32,7 @@ export function CoffeeSearch({ apiFetch, onResult }) {
     try {
       const data = await apiFetch('/parse-bag', {
         method: 'POST',
-        body: JSON.stringify({ text: bagText.trim() }),
+        body: JSON.stringify({ bag_text: bagText.trim() }),
       });
       onResult(data);
     } catch (err) {

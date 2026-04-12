@@ -13,11 +13,13 @@ export function AidenProfile({ recipe, tempUnit, coffeeName, apiFetch }) {
         method: 'POST',
         body: JSON.stringify({
           profile_name: profileName,
-          temp_c: recipe.temp_c,
-          temp_f: recipe.temp_f,
-          ratio: recipe.ratio,
-          bloom_time_s: recipe.bloom_time_s,
-          bloom_ratio: recipe.bloom_ratio,
+          rec: {
+            temp_c: recipe.temp_c,
+            temp_f: recipe.temp_f,
+            ratio: recipe.ratio,
+            bloom_time_s: recipe.bloom_time_s,
+            bloom_ratio: recipe.bloom_ratio,
+          },
         }),
       });
       setPushStatus('success');
