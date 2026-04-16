@@ -92,10 +92,10 @@ def build_aiden_profile(brewer, coffee_data, target_microns, dose_g, water_g):
         "ratio": ratio,
         "dose_g": round(dose_g, 1),
         "water_g": round(water_g),
-        "bloom_dur": bloom["bloom_dur"],
+        "bloom_time_s": bloom["bloom_dur"],
         "bloom_ratio": bloom["bloom_ratio"],
         "pulses": pulses["pulses"],
-        "pulse_int": pulses["pulse_int"],
+        "pulse_interval_s": pulses["pulse_int"],
     }
 
 

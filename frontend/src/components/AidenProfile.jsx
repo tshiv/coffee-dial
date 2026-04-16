@@ -19,6 +19,8 @@ export function AidenProfile({ recipe, tempUnit, coffeeName, apiFetch }) {
             ratio: recipe.ratio,
             bloom_time_s: recipe.bloom_time_s,
             bloom_ratio: recipe.bloom_ratio,
+            pulses: recipe.pulses,
+            pulse_interval_s: recipe.pulse_interval_s,
           },
         }),
       });

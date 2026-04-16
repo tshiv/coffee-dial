@@ -452,8 +452,8 @@ def push_aiden():
         temp_c = max(50.0, min(99.0, temp_c))
 
         pulses = max(1, min(10, _get("pulses", "ssPulsesNumber", 1)))
-        bloom_dur = max(1, min(120, _get("bloom_dur", "bloomDuration", 40)))
-        pulse_int = max(5, min(60, _get("pulse_int", "ssPulsesInterval", 25)))
+        bloom_dur = max(1, min(120, _get("bloom_time_s", "bloomDuration", 40)))
+        pulse_int = max(5, min(60, _get("pulse_interval_s", "ssPulsesInterval", 25)))
 
         profile = {
             "profileType": 0,
