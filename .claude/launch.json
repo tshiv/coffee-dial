@@ -4,14 +4,19 @@
     {
       "name": "Coffee Dial Frontend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 5173,
       "cwd": "frontend"
     },
     {
       "name": "Coffee Dial Backend",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["app.py"],
+      "runtimeExecutable": "venv/bin/python",
+      "runtimeArgs": [
+        "app.py"
+      ],
       "port": 8765,
       "cwd": "backend"
     }
