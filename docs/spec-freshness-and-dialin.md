@@ -215,19 +215,22 @@ next recommendation shows a coarser setting **and** the same temp and ratio.
 **What:** List profiles on the brewer and delete them by id, so a long dial-in
 chain doesn't leave two dozen near-identical profiles on the machine.
 
-The library already exposes what's needed — verified against the installed
-`fellow-aiden` 0.2.2:
+**Update:** the listing half is now built, and the `fellow-aiden` dependency
+was dropped in the process. That package read profiles from a `profiles` key
+inside the device payload, which Fellow's API no longer returns — the stock
+library raises `KeyError` on connect, and the workaround for that turned the
+schema change into a silent "0 profiles" on an account holding 22. It was also
+GPL-3.0 against this project's MIT, and last saw a release in March 2025.
 
-```
-get_profiles, get_profile_by_title, create_profile, update_profile,
-delete_profile_by_id, generate_share_link, create_profile_from_link,
-get_schedules, create_schedule, delete_schedule_by_id, toggle_schedule
-```
+`backend/aiden/client.py` replaces it: ~200 lines, MIT, no monkey-patching, and
+it raises on an unexpected payload shape rather than returning an empty list.
+`AidenClient.delete_profile()` exists and is unit-tested against stubs, but is
+**not** wired to an HTTP route.
 
 **Files:**
-- `backend/app.py` — modified: `GET /api/aiden-profiles`,
-  `DELETE /api/aiden-profiles/<profile_id>`. Reuses the existing auth and the
-  `__device` monkey-patch already in `push_aiden()` at `app.py:411-431`.
+- `backend/aiden/client.py` — created: auth, device, profiles, create, delete
+- `backend/app.py` — `GET /api/aiden-profiles` built; the `DELETE` route is
+  still unbuilt and needs sign-off
 - `frontend/src/components/AidenProfile.jsx` — modified: a profile list with
   per-row delete and a confirm step
 

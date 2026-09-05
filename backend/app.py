@@ -28,7 +28,6 @@ Endpoints:
 
 import os
 import json
-import logging
 import sqlite3
 import time
 from flask import Flask, request, jsonify, send_from_directory
@@ -42,6 +41,7 @@ from engine import dialin
 from equipment.loader import get_grinder, get_brewer, list_equipment
 from community.loader import search_recipes, scale_recipe
 from community.brewlink import fetch_brewlink_profile, brewlink_to_community_recipe
+from aiden import AidenClient, AidenError, AidenAuthError
 
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
 
@@ -574,11 +574,7 @@ def delete_preset(preset_id):
 # ─── Aiden ────────────────────────────────────────────────────────────────────
 
 def _aiden_client():
-    """Authenticate against the Fellow account. Returns (client, error_response).
-
-    The monkey-patch works around fellow-aiden 0.2.2 crashing when the device
-    response omits 'profiles' or 'schedules'.
-    """
+    """Authenticate against the Fellow account. Returns (client, error_response)."""
     settings = load_settings()
     email = settings.get("fellow_email")
     password = settings.get("fellow_password")
@@ -588,67 +584,29 @@ def _aiden_client():
         }), 400)
 
     try:
-        from fellow_aiden import FellowAiden
-    except ImportError:
-        return None, (jsonify({"error": "fellow-aiden package not installed."}), 500)
-
-    # fellow-aiden 0.2.2 defaults its logger to DEBUG and logs the raw auth
-    # response, which puts the account's accessToken and long-lived
-    # refreshToken on stdout. Raise the level before authenticating.
-    # Targeted at the library's own logger rather than logging.disable(), so
-    # Flask's request log and everything else keep working.
-    FellowAiden.LOG_LEVEL = logging.WARNING
-    logging.getLogger(FellowAiden.NAME).setLevel(logging.WARNING)
-
-    def _safe_device(self):
-        """Replacement for fellow-aiden 0.2.2's __device().
-
-        The library expects 'profiles' and 'schedules' inside the device
-        payload. Fellow's API no longer returns them there — the device
-        response has no 'profiles' key at all, which is what makes the stock
-        library raise KeyError. Profiles now live at their own endpoint, so
-        falling back to an empty list would silently report zero profiles.
-        """
-        import json as _json
-        device_url = self.BASE_URL + self.API_DEVICES
-        response = self.SESSION.get(device_url, params={'dataType': 'real'})
-        if response.status_code == 401:
-            self._FellowAiden__auth()
-            response = self.SESSION.get(device_url, params={'dataType': 'real'})
-        parsed = _json.loads(response.content)
-        self._device_config = parsed[0]
-        self._brewer_id = self._device_config['id']
-
-        profiles_url = self.BASE_URL + self.API_PROFILES.format(id=self._brewer_id)
-        pr = self.SESSION.get(profiles_url)
-        self._profiles = _json.loads(pr.content) if pr.status_code == 200 else []
-
-        self._schedules = self._device_config.get('schedules', [])
-    FellowAiden._FellowAiden__device = _safe_device
-
-    try:
-        return FellowAiden(email, password), None
-    except Exception as e:
-        return None, (jsonify({"error": f"Fellow login failed: {e}"}), 502)
+        return AidenClient(email, password), None
+    except AidenAuthError as e:
+        return None, (jsonify({"error": str(e)}), 401)
+    except AidenError as e:
+        return None, (jsonify({"error": f"Could not reach the brewer: {e}"}), 502)
 
 
 @app.route("/api/aiden-profiles", methods=["GET"])
 def get_aiden_profiles():
     """List the brew profiles currently on the brewer. Read-only."""
-    fa, err = _aiden_client()
+    client, err = _aiden_client()
     if err:
         return err
 
     try:
-        profiles = fa.get_profiles()
-    except Exception as e:
-        return jsonify({"error": f"Could not read profiles: {e}"}), 502
-
-    return jsonify({
-        "brewer": fa.get_display_name(),
-        "count": len(profiles or []),
-        "profiles": profiles or [],
-    })
+        profiles = client.get_profiles()
+        return jsonify({
+            "brewer": client.display_name,
+            "count": len(profiles),
+            "profiles": profiles,
+        })
+    except AidenError as e:
+        return jsonify({"error": str(e)}), 502
 
 
 # ─── Aiden Push ───────────────────────────────────────────────────────────────
@@ -656,92 +614,59 @@ def get_aiden_profiles():
 @app.route("/api/push-aiden", methods=["POST"])
 def push_aiden():
     data = request.json or {}
-    settings = load_settings()
-
-    email = settings.get("fellow_email")
-    password = settings.get("fellow_password")
-    if not email or not password:
-        return jsonify({"error": "Fellow credentials not configured. Add them in Settings."}), 400
-
     profile_name = data.get("profile_name", "Coffee Dial Profile")
     rec = data.get("rec", {})
 
+    client, err = _aiden_client()
+    if err:
+        return err
+
+    # Normalize field names: accept both engine snake_case and Fellow camelCase
+    def _get(engine_key, fellow_key, default):
+        return rec.get(engine_key, rec.get(fellow_key, default))
+
+    # Snap ratio to Aiden's allowed values (14–20 in 0.5 steps)
+    raw_ratio = _get("ratio", "ratio", 16)
+    ratio = round(raw_ratio * 2) / 2  # nearest 0.5
+    ratio = max(14.0, min(20.0, ratio))
+
+    # Snap bloom ratio (1–3 in 0.5 steps)
+    raw_bloom = _get("bloom_ratio", "bloomRatio", 2.5)
+    bloom_ratio = round(raw_bloom * 2) / 2
+    bloom_ratio = max(1.0, min(3.0, bloom_ratio))
+
+    # Temps must be Celsius, snapped to 0.5, range 50–99
+    raw_temp = _get("temp_c", "bloomTemperature", 94)
+    temp_c = round(raw_temp * 2) / 2
+    temp_c = max(50.0, min(99.0, temp_c))
+
+    pulses = max(1, min(10, _get("pulses", "ssPulsesNumber", 1)))
+    bloom_dur = max(1, min(120, _get("bloom_time_s", "bloomDuration", 40)))
+    pulse_int = max(5, min(60, _get("pulse_interval_s", "ssPulsesInterval", 25)))
+
+    profile = {
+        "profileType": 0,
+        "title": profile_name[:50],
+        "ratio": ratio,
+        "bloomEnabled": True,
+        "bloomRatio": bloom_ratio,
+        "bloomDuration": bloom_dur,
+        "bloomTemperature": temp_c,
+        "ssPulsesEnabled": pulses > 1,
+        "ssPulsesNumber": pulses,
+        "ssPulsesInterval": pulse_int,
+        "ssPulseTemperatures": [temp_c] * pulses,
+        "batchPulsesEnabled": False,
+        "batchPulsesNumber": 1,
+        "batchPulsesInterval": 5,
+        "batchPulseTemperatures": [temp_c],
+    }
+
     try:
-        from fellow_aiden import FellowAiden
-
-        # Monkey-patch: fellow-aiden 0.2.2 crashes if device response
-        # lacks 'profiles' or 'schedules' keys (API schema change).
-        _orig_device = FellowAiden._FellowAiden__device
-        def _safe_device(self):
-            import json as _json
-            self._log.debug("Fetching device for account")
-            device_url = self.BASE_URL + self.API_DEVICES
-            response = self.SESSION.get(device_url, params={'dataType': 'real'})
-            if response.status_code == 401:
-                self._FellowAiden__auth()
-                response = self.SESSION.get(device_url, params={'dataType': 'real'})
-            parsed = _json.loads(response.content)
-            self._device_config = parsed[0]
-            self._brewer_id = self._device_config['id']
-            self._profiles = self._device_config.get('profiles', [])
-            self._schedules = self._device_config.get('schedules', [])
-            self._log.debug("Brewer ID: %s" % self._brewer_id)
-            self._log.info("Device and profile information set")
-        FellowAiden._FellowAiden__device = _safe_device
-
-        fa = FellowAiden(email, password)
-
-        # Normalize field names: accept both engine snake_case and Fellow camelCase
-        def _get(engine_key, fellow_key, default):
-            return rec.get(engine_key, rec.get(fellow_key, default))
-
-        # Snap ratio to Aiden's allowed values (14–20 in 0.5 steps)
-        raw_ratio = _get("ratio", "ratio", 16)
-        ratio = round(raw_ratio * 2) / 2  # nearest 0.5
-        ratio = max(14.0, min(20.0, ratio))
-
-        # Snap bloom ratio (1–3 in 0.5 steps)
-        raw_bloom = _get("bloom_ratio", "bloomRatio", 2.5)
-        bloom_ratio = round(raw_bloom * 2) / 2
-        bloom_ratio = max(1.0, min(3.0, bloom_ratio))
-
-        # Temps must be Celsius, snapped to 0.5, range 50–99
-        raw_temp = _get("temp_c", "bloomTemperature", 94)
-        temp_c = round(raw_temp * 2) / 2
-        temp_c = max(50.0, min(99.0, temp_c))
-
-        pulses = max(1, min(10, _get("pulses", "ssPulsesNumber", 1)))
-        bloom_dur = max(1, min(120, _get("bloom_time_s", "bloomDuration", 40)))
-        pulse_int = max(5, min(60, _get("pulse_interval_s", "ssPulsesInterval", 25)))
-
-        profile = {
-            "profileType": 0,
-            "title": profile_name[:50],
-            "ratio": ratio,
-            "bloomEnabled": True,
-            "bloomRatio": bloom_ratio,
-            "bloomDuration": bloom_dur,
-            "bloomTemperature": temp_c,
-            "ssPulsesEnabled": pulses > 1,
-            "ssPulsesNumber": pulses,
-            "ssPulsesInterval": pulse_int,
-            "ssPulseTemperatures": [temp_c] * pulses,
-            "batchPulsesEnabled": False,
-            "batchPulsesNumber": 1,
-            "batchPulsesInterval": 5,
-            "batchPulseTemperatures": [temp_c],
-        }
-        result = fa.create_profile(profile)
+        result = client.create_profile(profile)
         return jsonify({"ok": True, "profile": result})
-    except ImportError:
-        return jsonify({
-            "error": "fellow-aiden package not installed. Run: pip install fellow-aiden",
-            "install_cmd": "pip install fellow-aiden"
-        }), 500
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+    except AidenError as e:
+        return jsonify({"error": str(e)}), 502
 
 
 # ─── Community Recipes ───────────────────────────────────────────────────────────
