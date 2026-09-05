@@ -28,6 +28,7 @@ Endpoints:
 
 import os
 import json
+import logging
 import sqlite3
 import time
 from flask import Flask, request, jsonify, send_from_directory
@@ -568,6 +569,86 @@ def delete_preset(preset_id):
         conn.execute("DELETE FROM presets WHERE id = ?", (preset_id,))
         conn.commit()
     return jsonify({"ok": True})
+
+
+# ─── Aiden ────────────────────────────────────────────────────────────────────
+
+def _aiden_client():
+    """Authenticate against the Fellow account. Returns (client, error_response).
+
+    The monkey-patch works around fellow-aiden 0.2.2 crashing when the device
+    response omits 'profiles' or 'schedules'.
+    """
+    settings = load_settings()
+    email = settings.get("fellow_email")
+    password = settings.get("fellow_password")
+    if not email or not password:
+        return None, (jsonify({
+            "error": "Fellow credentials not configured. Add them in Settings."
+        }), 400)
+
+    try:
+        from fellow_aiden import FellowAiden
+    except ImportError:
+        return None, (jsonify({"error": "fellow-aiden package not installed."}), 500)
+
+    # fellow-aiden 0.2.2 defaults its logger to DEBUG and logs the raw auth
+    # response, which puts the account's accessToken and long-lived
+    # refreshToken on stdout. Raise the level before authenticating.
+    # Targeted at the library's own logger rather than logging.disable(), so
+    # Flask's request log and everything else keep working.
+    FellowAiden.LOG_LEVEL = logging.WARNING
+    logging.getLogger(FellowAiden.NAME).setLevel(logging.WARNING)
+
+    def _safe_device(self):
+        """Replacement for fellow-aiden 0.2.2's __device().
+
+        The library expects 'profiles' and 'schedules' inside the device
+        payload. Fellow's API no longer returns them there — the device
+        response has no 'profiles' key at all, which is what makes the stock
+        library raise KeyError. Profiles now live at their own endpoint, so
+        falling back to an empty list would silently report zero profiles.
+        """
+        import json as _json
+        device_url = self.BASE_URL + self.API_DEVICES
+        response = self.SESSION.get(device_url, params={'dataType': 'real'})
+        if response.status_code == 401:
+            self._FellowAiden__auth()
+            response = self.SESSION.get(device_url, params={'dataType': 'real'})
+        parsed = _json.loads(response.content)
+        self._device_config = parsed[0]
+        self._brewer_id = self._device_config['id']
+
+        profiles_url = self.BASE_URL + self.API_PROFILES.format(id=self._brewer_id)
+        pr = self.SESSION.get(profiles_url)
+        self._profiles = _json.loads(pr.content) if pr.status_code == 200 else []
+
+        self._schedules = self._device_config.get('schedules', [])
+    FellowAiden._FellowAiden__device = _safe_device
+
+    try:
+        return FellowAiden(email, password), None
+    except Exception as e:
+        return None, (jsonify({"error": f"Fellow login failed: {e}"}), 502)
+
+
+@app.route("/api/aiden-profiles", methods=["GET"])
+def get_aiden_profiles():
+    """List the brew profiles currently on the brewer. Read-only."""
+    fa, err = _aiden_client()
+    if err:
+        return err
+
+    try:
+        profiles = fa.get_profiles()
+    except Exception as e:
+        return jsonify({"error": f"Could not read profiles: {e}"}), 502
+
+    return jsonify({
+        "brewer": fa.get_display_name(),
+        "count": len(profiles or []),
+        "profiles": profiles or [],
+    })
 
 
 # ─── Aiden Push ───────────────────────────────────────────────────────────────
