@@ -7,6 +7,7 @@ import { InputView } from './views/InputView';
 import { RecipeView } from './views/RecipeView';
 import { SettingsView } from './views/SettingsView';
 import { HistoryView } from './views/HistoryView';
+import { AidenProfilesView } from './views/AidenProfilesView';
 
 export function App() {
   const { theme, setTheme } = useTheme();
@@ -72,11 +73,19 @@ export function App() {
           setTheme={setTheme}
           onDone={() => setView(previousView)}
           onViewHistory={() => navigate('history')}
+          onViewAidenProfiles={() => navigate('aidenProfiles')}
         />
       )}
       {view === 'history' && (
         <HistoryView
           apiFetch={api.apiFetch}
+          onDone={() => setView('settings')}
+        />
+      )}
+      {view === 'aidenProfiles' && (
+        <AidenProfilesView
+          apiFetch={api.apiFetch}
+          tempUnit={api.tempUnit}
           onDone={() => setView('settings')}
         />
       )}

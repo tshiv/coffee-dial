@@ -591,6 +591,61 @@ def _aiden_client():
         return None, (jsonify({"error": f"Could not reach the brewer: {e}"}), 502)
 
 
+def _shape_profile(p):
+    """Flatten one Fellow profile into what the UI needs.
+
+    Fellow uses -1 and null interchangeably for "never used", so both become
+    None here rather than surfacing as a 1969 timestamp.
+    """
+    last_used = p.get("lastUsedTime")
+    if not isinstance(last_used, int) or last_used <= 0:
+        last_used = None
+
+    # Folder casing is inconsistent in Fellow's data ('drops' and 'Drops').
+    folder = (p.get("folder") or "").strip()
+    folder = folder.title() if folder else "Uncategorized"
+
+    pulses = p.get("ssPulsesNumber") or 1
+
+    # Fellow leaves overallTemperature null on plenty of profiles even though
+    # the per-pulse temperatures are set. Fall back to those rather than
+    # showing a blank, and say when the number was derived.
+    temp_c = p.get("overallTemperature")
+    temp_derived = False
+    if temp_c is None:
+        pulse_temps = [t for t in (p.get("ssPulseTemperatures") or []) if t is not None]
+        if pulse_temps:
+            temp_c = max(set(pulse_temps), key=pulse_temps.count)
+            temp_derived = True
+        elif p.get("bloomTemperature") is not None:
+            temp_c = p.get("bloomTemperature")
+            temp_derived = True
+
+    return {
+        "id": p.get("id"),
+        "title": p.get("title") or "(untitled)",
+        "folder": folder,
+        "is_cold_brew": p.get("profileType") == 1,
+        "is_default": bool(p.get("isDefaultProfile")),
+
+        "last_used": last_used,
+        "updated_at": p.get("updatedAt"),
+        # Fellow's curated drops carry the date they landed on the brewer.
+        "added_at": p.get("scheduledAt"),
+
+        "ratio": p.get("ratio"),
+        "temp_c": temp_c,
+        "temp_is_derived": temp_derived,
+        "bloom_enabled": bool(p.get("bloomEnabled")),
+        "bloom_ratio": p.get("bloomRatio"),
+        "bloom_duration_s": p.get("bloomDuration"),
+        "bloom_temp_c": p.get("bloomTemperature"),
+        "pulses": pulses,
+        "pulse_interval_s": p.get("ssPulsesInterval"),
+        "pulse_temps_c": p.get("ssPulseTemperatures") or [],
+    }
+
+
 @app.route("/api/aiden-profiles", methods=["GET"])
 def get_aiden_profiles():
     """List the brew profiles currently on the brewer. Read-only."""
@@ -599,14 +654,28 @@ def get_aiden_profiles():
         return err
 
     try:
-        profiles = client.get_profiles()
-        return jsonify({
-            "brewer": client.display_name,
-            "count": len(profiles),
-            "profiles": profiles,
-        })
+        raw = client.get_profiles()
+        device = client.device()
     except AidenError as e:
         return jsonify({"error": str(e)}), 502
+
+    profiles = [_shape_profile(p) for p in raw]
+    # Most recently used first; never-used fall to the back, alphabetical.
+    profiles.sort(key=lambda p: (p["last_used"] is None,
+                                 -(p["last_used"] or 0),
+                                 p["title"].lower()))
+
+    return jsonify({
+        "brewer": client.display_name,
+        "count": len(profiles),
+        "profiles": profiles,
+        # Fellow exposes no per-profile brew counter. This is device-wide,
+        # and is the only usage total available anywhere in the API.
+        "device_totals": {
+            "total_brewing_cycles": device.get("totalBrewingCycles"),
+            "total_water_litres": device.get("totalWaterVolumeL"),
+        },
+    })
 
 
 # ─── Aiden Push ───────────────────────────────────────────────────────────────
