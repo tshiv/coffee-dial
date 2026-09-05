@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'preact/hooks';
 import styles from './SettingsView.module.css';
 
-export function SettingsView({ api, equipment, theme, setTheme, onDone, onViewHistory }) {
+export function SettingsView({ api, equipment, theme, setTheme, onDone, onViewHistory, onViewAidenProfiles }) {
   const [settings, setSettings] = useState({});
   const [presets, setPresets] = useState([]);
   const [history, setHistory] = useState([]);
@@ -213,6 +213,15 @@ export function SettingsView({ api, equipment, theme, setTheme, onDone, onViewHi
             <button class={styles.themeBtn} onClick={onViewHistory}>View</button>{' '}
             <button class={styles.dangerBtn} onClick={clearHistory}>Clear All</button>
           </div>
+        </div>
+      </div>
+
+      {/* Aiden Profiles */}
+      <div class={styles.card}>
+        <div class={styles.cardTitle}>Aiden Profiles</div>
+        <div class={styles.row}>
+          <span class={styles.rowLabel}>Profiles on the brewer</span>
+          <button class={styles.themeBtn} onClick={onViewAidenProfiles}>View</button>
         </div>
       </div>
 

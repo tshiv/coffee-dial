@@ -21,7 +21,7 @@ from .grind import (
 from .recipes import build_recipe
 
 
-def build_recommendation(coffee_data, grinder, brewer, oz, history_rows):
+def build_recommendation(coffee_data, grinder, brewer, oz, history_rows, chain=None):
     """Build a complete brew recommendation.
 
     Args:
@@ -30,6 +30,10 @@ def build_recommendation(coffee_data, grinder, brewer, oz, history_rows):
         brewer: brewer definition dict from equipment loader
         oz: desired output in ounces
         history_rows: list of past brew dicts with roast/rating fields
+        chain: accumulated one-lever dial-in deltas for this specific coffee.
+            When present it takes precedence over the aggregate roast-level
+            learning below, which stays as the prior for a coffee you have not
+            brewed yet.
 
     Returns:
         dict with grinder_setting, grinder_display, target_microns, recipe, bias_notes
@@ -61,9 +65,25 @@ def build_recommendation(coffee_data, grinder, brewer, oz, history_rows):
         micron_offset += volume_offset
         bias_notes.append(f"{oz}oz volume adjustment")
 
-    # Step 2: History-based learning (works in micron space)
+    # Step 2: Dial-in chain for this coffee, else aggregate history learning.
+    # Both work in micron space, so either survives a change of grinder.
+    has_chain = bool(chain) and any(
+        chain.get(k) for k in ("micron_delta", "temp_delta_c", "ratio_delta")
+    )
+
+    if has_chain:
+        micron_delta = chain.get("micron_delta") or 0
+        if micron_delta:
+            micron_offset += micron_delta
+            bias_notes.append(
+                "Dial-in: {} microns {}".format(
+                    abs(round(micron_delta)),
+                    "coarser" if micron_delta > 0 else "finer",
+                )
+            )
+
     similar = [b for b in history_rows if b["roast"] == roast]
-    if similar:
+    if similar and not has_chain:
         bitter_count = sum(1 for b in similar if b["rating"] == "bitter")
         bright_count = sum(1 for b in similar if b["rating"] == "bright")
         flat_count = sum(1 for b in similar if b["rating"] == "flat")
@@ -87,10 +107,35 @@ def build_recommendation(coffee_data, grinder, brewer, oz, history_rows):
     # Step 4: Compute dose from ratio
     water_g = oz * 29.5735
     ratio = _get_recipe_ratio(brewer, coffee_data)
+
+    if has_chain:
+        ratio_delta = chain.get("ratio_delta") or 0
+        if ratio_delta:
+            ratio = round(ratio + ratio_delta, 1)
+            bias_notes.append(
+                "Dial-in: ratio {} to 1:{}".format(
+                    "stronger" if ratio_delta < 0 else "weaker", ratio
+                )
+            )
+
     dose_g = water_g / ratio
 
     # Step 5: Build brew recipe
     recipe = build_recipe(brewer, coffee_data, target_microns, dose_g, water_g)
+
+    # Temperature is decided inside the recipe builder, so the chain's
+    # temperature delta is applied to the finished recipe rather than threaded
+    # through every brewer-specific builder.
+    if has_chain:
+        temp_delta = chain.get("temp_delta_c") or 0
+        if temp_delta and recipe.get("temp_c") is not None:
+            recipe["temp_c"] = round(recipe["temp_c"] + temp_delta, 1)
+            recipe["temp_f"] = round(recipe["temp_c"] * 9 / 5 + 32, 1)
+            bias_notes.append(
+                "Dial-in: {} {}°C".format(
+                    "+" if temp_delta > 0 else "-", abs(round(temp_delta, 1))
+                )
+            )
 
     return {
         "grinder_name": grinder["name"],

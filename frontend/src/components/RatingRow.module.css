@@ -63,3 +63,50 @@
   margin-top: 8px;
   text-align: center;
 }
+
+.dialin {
+  margin-top: 16px;
+  padding: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.dialinLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+}
+
+.dialinLever {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 6px;
+}
+
+.dialinValue {
+  color: var(--color-accent);
+}
+
+.dialinReason {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.dialinNoted {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  margin-top: 8px;
+}
+
+.dialinDone {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-green);
+}

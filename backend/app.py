@@ -13,6 +13,11 @@ Endpoints:
   POST /api/history           — Save a brew entry
   PUT  /api/history/<id>      — Update a brew entry (e.g. add rating)
   DELETE /api/history/<id>    — Delete a brew entry
+  GET  /api/bags              — List bags with computed freshness
+  POST /api/bags              — Create a bag
+  PUT  /api/bags/<id>         — Update a bag (roast date, open, freeze, thaw)
+  DELETE /api/bags/<id>       — Delete a bag
+  POST /api/brews/<id>/rate   — Rate a brew, get the one change for the next
   GET  /api/presets           — Get volume presets
   POST /api/presets           — Save a volume preset
   DELETE /api/presets/<id>    — Delete a preset
@@ -31,9 +36,12 @@ from flask_cors import CORS
 from ai.parsing import call_ai
 from ai.recipe_search import search_roaster_recipe
 from engine.recommend import build_recommendation
+from engine import freshness
+from engine import dialin
 from equipment.loader import get_grinder, get_brewer, list_equipment
 from community.loader import search_recipes, scale_recipe
 from community.brewlink import fetch_brewlink_profile, brewlink_to_community_recipe
+from aiden import AidenClient, AidenError, AidenAuthError
 
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
 
@@ -92,6 +100,24 @@ def init_db():
                 ('Two cups (20oz)', 20.0, 1),
                 ('Full pot (32oz)', 32.0, 2);
 
+            CREATE TABLE IF NOT EXISTS bags (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                coffee_name TEXT NOT NULL,
+                roaster     TEXT,
+                roast       TEXT,
+                origin      TEXT,
+                process     TEXT,
+                is_decaf    INTEGER DEFAULT 0,
+                storage     TEXT DEFAULT 'vacuum',
+                roast_date  INTEGER,
+                opened_at   INTEGER,
+                frozen_at   INTEGER,
+                thawed_at   INTEGER,
+                finished_at INTEGER,
+                notes       TEXT,
+                created_at  INTEGER NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS user_equipment (
                 id             INTEGER PRIMARY KEY AUTOINCREMENT,
                 equipment_type TEXT NOT NULL,
@@ -124,6 +150,15 @@ def _migrate_brews(conn):
         "dose_g": "REAL",
         "water_g": "REAL",
         "recipe_json": "TEXT",
+        # Freshness: which bag this brew came from. Nullable, so brews logged
+        # without a bag keep working exactly as before.
+        "bag_id": "INTEGER",
+        # One-lever dial-in chain.
+        "parent_brew_id": "INTEGER",
+        "version": "INTEGER",
+        "chain_micron_delta": "REAL",
+        "chain_temp_delta_c": "REAL",
+        "chain_ratio_delta": "REAL",
     }
     for col, col_type in new_columns.items():
         if col not in cols:
@@ -296,10 +331,20 @@ def recommend():
     if not brewer:
         return jsonify({"error": f"Unknown brewer: {brewer_id}"}), 400
 
+    # An explicit chain wins; otherwise inherit the parent brew's accumulated
+    # deltas so a follow-up recommendation continues the same dial-in.
+    chain = data.get("chain")
+    parent_brew_id = data.get("parent_brew_id")
+
     with get_db() as conn:
         rows = conn.execute("SELECT roast, rating FROM brews WHERE rating IS NOT NULL").fetchall()
+        if chain is None and parent_brew_id:
+            parent = conn.execute(
+                "SELECT * FROM brews WHERE id = ?", (parent_brew_id,)
+            ).fetchone()
+            chain = dialin.chain_from_row(parent)
 
-    rec = build_recommendation(coffee_data, grinder, brewer, oz, rows)
+    rec = build_recommendation(coffee_data, grinder, brewer, oz, rows, chain=chain)
     return jsonify(rec)
 
 
@@ -321,7 +366,9 @@ def post_history():
     fields = ["timestamp", "bag_text", "coffee_name", "roast", "origin", "process", "roaster",
               "grinder_id", "brewer_id", "grind", "grinder_setting_display", "target_microns",
               "temp_c", "ratio", "dose_g", "water_g", "brew_oz",
-              "recipe_json", "preset_name", "rating", "notes", "rationale"]
+              "recipe_json", "preset_name", "rating", "notes", "rationale",
+              "bag_id", "parent_brew_id", "version",
+              "chain_micron_delta", "chain_temp_delta_c", "chain_ratio_delta"]
     vals = {f: data.get(f) for f in fields}
     cols = ", ".join(vals.keys())
     placeholders = ", ".join(["?"] * len(vals))
@@ -360,6 +407,138 @@ def delete_all_history():
     return jsonify({"ok": True, "deleted": result.rowcount})
 
 
+# ─── Bags & Freshness ─────────────────────────────────────────────────────────
+
+BAG_FIELDS = ["coffee_name", "roaster", "roast", "origin", "process", "is_decaf",
+              "storage", "roast_date", "opened_at", "frozen_at", "thawed_at",
+              "finished_at", "notes"]
+
+
+def _bag_with_freshness(row, now=None):
+    """Attach the computed freshness read to a bag row."""
+    bag = dict(row)
+    now = now if now is not None else int(time.time())
+    bag["freshness"] = freshness.compute_phase(bag, now)
+    return bag
+
+
+@app.route("/api/bags", methods=["GET"])
+def get_bags():
+    include_finished = request.args.get("include_finished") == "1"
+    query = "SELECT * FROM bags"
+    if not include_finished:
+        query += " WHERE finished_at IS NULL"
+    query += " ORDER BY created_at DESC"
+    with get_db() as conn:
+        rows = conn.execute(query).fetchall()
+    return jsonify([_bag_with_freshness(r) for r in rows])
+
+
+@app.route("/api/bags", methods=["POST"])
+def post_bag():
+    data = request.json or {}
+    name = (data.get("coffee_name") or "").strip()
+    if not name:
+        return jsonify({"error": "coffee_name required"}), 400
+
+    vals = {f: data.get(f) for f in BAG_FIELDS}
+    vals["coffee_name"] = name
+    vals["is_decaf"] = 1 if data.get("is_decaf") else 0
+    vals["storage"] = data.get("storage") or freshness.DEFAULT_STORAGE
+    vals["created_at"] = int(time.time())
+
+    cols = ", ".join(vals.keys())
+    placeholders = ", ".join(["?"] * len(vals))
+    with get_db() as conn:
+        cur = conn.execute(
+            f"INSERT INTO bags ({cols}) VALUES ({placeholders})", list(vals.values())
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM bags WHERE id = ?", (cur.lastrowid,)).fetchone()
+    return jsonify(_bag_with_freshness(row)), 201
+
+
+@app.route("/api/bags/<int:bag_id>", methods=["PUT"])
+def put_bag(bag_id):
+    data = request.json or {}
+    updates = {k: v for k, v in data.items() if k in BAG_FIELDS}
+    if not updates:
+        return jsonify({"error": "No valid fields to update"}), 400
+    if "is_decaf" in updates:
+        updates["is_decaf"] = 1 if updates["is_decaf"] else 0
+
+    set_clause = ", ".join(f"{k} = ?" for k in updates)
+    with get_db() as conn:
+        conn.execute(f"UPDATE bags SET {set_clause} WHERE id = ?", [*updates.values(), bag_id])
+        conn.commit()
+        row = conn.execute("SELECT * FROM bags WHERE id = ?", (bag_id,)).fetchone()
+    if row is None:
+        return jsonify({"error": "Bag not found"}), 404
+    return jsonify(_bag_with_freshness(row))
+
+
+@app.route("/api/bags/<int:bag_id>", methods=["DELETE"])
+def delete_bag(bag_id):
+    with get_db() as conn:
+        conn.execute("DELETE FROM bags WHERE id = ?", (bag_id,))
+        conn.commit()
+    return jsonify({"ok": True})
+
+
+# ─── Dial-in ──────────────────────────────────────────────────────────────────
+
+@app.route("/api/brews/<int:brew_id>/rate", methods=["POST"])
+def rate_brew(brew_id):
+    """Record a rating and return the single change for the next brew.
+
+    Does not create the next brew row — that happens when the next brew is
+    logged with parent_brew_id set to this one.
+    """
+    data = request.json or {}
+    ratings = data.get("ratings") or data.get("rating")
+    if not ratings:
+        return jsonify({"error": "rating required"}), 400
+
+    rating_list = dialin.normalize_ratings(ratings)
+    stored_rating = rating_list[0] if len(rating_list) == 1 else ",".join(rating_list)
+
+    with get_db() as conn:
+        brew = conn.execute("SELECT * FROM brews WHERE id = ?", (brew_id,)).fetchone()
+        if brew is None:
+            return jsonify({"error": "Brew not found"}), 404
+        conn.execute("UPDATE brews SET rating = ? WHERE id = ?", (stored_rating, brew_id))
+        conn.commit()
+        brew = conn.execute("SELECT * FROM brews WHERE id = ?", (brew_id,)).fetchone()
+
+    adjustment = dialin.next_adjustment(rating_list)
+    next_chain = dialin.apply_adjustment(dialin.chain_from_row(brew), adjustment)
+
+    response = {
+        "brew_id": brew_id,
+        "adjustment": adjustment,
+        "next_chain": next_chain,
+        "next_version": (brew["version"] or 1) + 1,
+        "chain_complete": adjustment["chain_complete"],
+    }
+
+    # When something actually moved, show what the next brew would look like.
+    if adjustment["lever"] and brew["grinder_id"] and brew["brewer_id"]:
+        grinder = get_grinder(brew["grinder_id"])
+        brewer = get_brewer(brew["brewer_id"])
+        if grinder and brewer:
+            coffee_data = {
+                "roast": brew["roast"],
+                "origin": brew["origin"],
+                "process": brew["process"],
+                "name": brew["coffee_name"],
+            }
+            response["next_recommendation"] = build_recommendation(
+                coffee_data, grinder, brewer, brew["brew_oz"] or 12, [], chain=next_chain
+            )
+
+    return jsonify(response)
+
+
 # ─── Presets ──────────────────────────────────────────────────────────────────
 
 @app.route("/api/presets", methods=["GET"])
@@ -392,97 +571,171 @@ def delete_preset(preset_id):
     return jsonify({"ok": True})
 
 
+# ─── Aiden ────────────────────────────────────────────────────────────────────
+
+def _aiden_client():
+    """Authenticate against the Fellow account. Returns (client, error_response)."""
+    settings = load_settings()
+    email = settings.get("fellow_email")
+    password = settings.get("fellow_password")
+    if not email or not password:
+        return None, (jsonify({
+            "error": "Fellow credentials not configured. Add them in Settings."
+        }), 400)
+
+    try:
+        return AidenClient(email, password), None
+    except AidenAuthError as e:
+        return None, (jsonify({"error": str(e)}), 401)
+    except AidenError as e:
+        return None, (jsonify({"error": f"Could not reach the brewer: {e}"}), 502)
+
+
+def _shape_profile(p):
+    """Flatten one Fellow profile into what the UI needs.
+
+    Fellow uses -1 and null interchangeably for "never used", so both become
+    None here rather than surfacing as a 1969 timestamp.
+    """
+    last_used = p.get("lastUsedTime")
+    if not isinstance(last_used, int) or last_used <= 0:
+        last_used = None
+
+    # Folder casing is inconsistent in Fellow's data ('drops' and 'Drops').
+    folder = (p.get("folder") or "").strip()
+    folder = folder.title() if folder else "Uncategorized"
+
+    pulses = p.get("ssPulsesNumber") or 1
+
+    # Fellow leaves overallTemperature null on plenty of profiles even though
+    # the per-pulse temperatures are set. Fall back to those rather than
+    # showing a blank, and say when the number was derived.
+    temp_c = p.get("overallTemperature")
+    temp_derived = False
+    if temp_c is None:
+        pulse_temps = [t for t in (p.get("ssPulseTemperatures") or []) if t is not None]
+        if pulse_temps:
+            temp_c = max(set(pulse_temps), key=pulse_temps.count)
+            temp_derived = True
+        elif p.get("bloomTemperature") is not None:
+            temp_c = p.get("bloomTemperature")
+            temp_derived = True
+
+    return {
+        "id": p.get("id"),
+        "title": p.get("title") or "(untitled)",
+        "folder": folder,
+        "is_cold_brew": p.get("profileType") == 1,
+        "is_default": bool(p.get("isDefaultProfile")),
+
+        "last_used": last_used,
+        "updated_at": p.get("updatedAt"),
+        # Fellow's curated drops carry the date they landed on the brewer.
+        "added_at": p.get("scheduledAt"),
+
+        "ratio": p.get("ratio"),
+        "temp_c": temp_c,
+        "temp_is_derived": temp_derived,
+        "bloom_enabled": bool(p.get("bloomEnabled")),
+        "bloom_ratio": p.get("bloomRatio"),
+        "bloom_duration_s": p.get("bloomDuration"),
+        "bloom_temp_c": p.get("bloomTemperature"),
+        "pulses": pulses,
+        "pulse_interval_s": p.get("ssPulsesInterval"),
+        "pulse_temps_c": p.get("ssPulseTemperatures") or [],
+    }
+
+
+@app.route("/api/aiden-profiles", methods=["GET"])
+def get_aiden_profiles():
+    """List the brew profiles currently on the brewer. Read-only."""
+    client, err = _aiden_client()
+    if err:
+        return err
+
+    try:
+        raw = client.get_profiles()
+        device = client.device()
+    except AidenError as e:
+        return jsonify({"error": str(e)}), 502
+
+    profiles = [_shape_profile(p) for p in raw]
+    # Most recently used first; never-used fall to the back, alphabetical.
+    profiles.sort(key=lambda p: (p["last_used"] is None,
+                                 -(p["last_used"] or 0),
+                                 p["title"].lower()))
+
+    return jsonify({
+        "brewer": client.display_name,
+        "count": len(profiles),
+        "profiles": profiles,
+        # Fellow exposes no per-profile brew counter. This is device-wide,
+        # and is the only usage total available anywhere in the API.
+        "device_totals": {
+            "total_brewing_cycles": device.get("totalBrewingCycles"),
+            "total_water_litres": device.get("totalWaterVolumeL"),
+        },
+    })
+
+
 # ─── Aiden Push ───────────────────────────────────────────────────────────────
 
 @app.route("/api/push-aiden", methods=["POST"])
 def push_aiden():
     data = request.json or {}
-    settings = load_settings()
-
-    email = settings.get("fellow_email")
-    password = settings.get("fellow_password")
-    if not email or not password:
-        return jsonify({"error": "Fellow credentials not configured. Add them in Settings."}), 400
-
     profile_name = data.get("profile_name", "Coffee Dial Profile")
     rec = data.get("rec", {})
 
+    client, err = _aiden_client()
+    if err:
+        return err
+
+    # Normalize field names: accept both engine snake_case and Fellow camelCase
+    def _get(engine_key, fellow_key, default):
+        return rec.get(engine_key, rec.get(fellow_key, default))
+
+    # Snap ratio to Aiden's allowed values (14–20 in 0.5 steps)
+    raw_ratio = _get("ratio", "ratio", 16)
+    ratio = round(raw_ratio * 2) / 2  # nearest 0.5
+    ratio = max(14.0, min(20.0, ratio))
+
+    # Snap bloom ratio (1–3 in 0.5 steps)
+    raw_bloom = _get("bloom_ratio", "bloomRatio", 2.5)
+    bloom_ratio = round(raw_bloom * 2) / 2
+    bloom_ratio = max(1.0, min(3.0, bloom_ratio))
+
+    # Temps must be Celsius, snapped to 0.5, range 50–99
+    raw_temp = _get("temp_c", "bloomTemperature", 94)
+    temp_c = round(raw_temp * 2) / 2
+    temp_c = max(50.0, min(99.0, temp_c))
+
+    pulses = max(1, min(10, _get("pulses", "ssPulsesNumber", 1)))
+    bloom_dur = max(1, min(120, _get("bloom_time_s", "bloomDuration", 40)))
+    pulse_int = max(5, min(60, _get("pulse_interval_s", "ssPulsesInterval", 25)))
+
+    profile = {
+        "profileType": 0,
+        "title": profile_name[:50],
+        "ratio": ratio,
+        "bloomEnabled": True,
+        "bloomRatio": bloom_ratio,
+        "bloomDuration": bloom_dur,
+        "bloomTemperature": temp_c,
+        "ssPulsesEnabled": pulses > 1,
+        "ssPulsesNumber": pulses,
+        "ssPulsesInterval": pulse_int,
+        "ssPulseTemperatures": [temp_c] * pulses,
+        "batchPulsesEnabled": False,
+        "batchPulsesNumber": 1,
+        "batchPulsesInterval": 5,
+        "batchPulseTemperatures": [temp_c],
+    }
+
     try:
-        from fellow_aiden import FellowAiden
-
-        # Monkey-patch: fellow-aiden 0.2.2 crashes if device response
-        # lacks 'profiles' or 'schedules' keys (API schema change).
-        _orig_device = FellowAiden._FellowAiden__device
-        def _safe_device(self):
-            import json as _json
-            self._log.debug("Fetching device for account")
-            device_url = self.BASE_URL + self.API_DEVICES
-            response = self.SESSION.get(device_url, params={'dataType': 'real'})
-            if response.status_code == 401:
-                self._FellowAiden__auth()
-                response = self.SESSION.get(device_url, params={'dataType': 'real'})
-            parsed = _json.loads(response.content)
-            self._device_config = parsed[0]
-            self._brewer_id = self._device_config['id']
-            self._profiles = self._device_config.get('profiles', [])
-            self._schedules = self._device_config.get('schedules', [])
-            self._log.debug("Brewer ID: %s" % self._brewer_id)
-            self._log.info("Device and profile information set")
-        FellowAiden._FellowAiden__device = _safe_device
-
-        fa = FellowAiden(email, password)
-
-        # Normalize field names: accept both engine snake_case and Fellow camelCase
-        def _get(engine_key, fellow_key, default):
-            return rec.get(engine_key, rec.get(fellow_key, default))
-
-        # Snap ratio to Aiden's allowed values (14–20 in 0.5 steps)
-        raw_ratio = _get("ratio", "ratio", 16)
-        ratio = round(raw_ratio * 2) / 2  # nearest 0.5
-        ratio = max(14.0, min(20.0, ratio))
-
-        # Snap bloom ratio (1–3 in 0.5 steps)
-        raw_bloom = _get("bloom_ratio", "bloomRatio", 2.5)
-        bloom_ratio = round(raw_bloom * 2) / 2
-        bloom_ratio = max(1.0, min(3.0, bloom_ratio))
-
-        # Temps must be Celsius, snapped to 0.5, range 50–99
-        raw_temp = _get("temp_c", "bloomTemperature", 94)
-        temp_c = round(raw_temp * 2) / 2
-        temp_c = max(50.0, min(99.0, temp_c))
-
-        pulses = max(1, min(10, _get("pulses", "ssPulsesNumber", 1)))
-        bloom_dur = max(1, min(120, _get("bloom_time_s", "bloomDuration", 40)))
-        pulse_int = max(5, min(60, _get("pulse_interval_s", "ssPulsesInterval", 25)))
-
-        profile = {
-            "profileType": 0,
-            "title": profile_name[:50],
-            "ratio": ratio,
-            "bloomEnabled": True,
-            "bloomRatio": bloom_ratio,
-            "bloomDuration": bloom_dur,
-            "bloomTemperature": temp_c,
-            "ssPulsesEnabled": pulses > 1,
-            "ssPulsesNumber": pulses,
-            "ssPulsesInterval": pulse_int,
-            "ssPulseTemperatures": [temp_c] * pulses,
-            "batchPulsesEnabled": False,
-            "batchPulsesNumber": 1,
-            "batchPulsesInterval": 5,
-            "batchPulseTemperatures": [temp_c],
-        }
-        result = fa.create_profile(profile)
+        result = client.create_profile(profile)
         return jsonify({"ok": True, "profile": result})
-    except ImportError:
-        return jsonify({
-            "error": "fellow-aiden package not installed. Run: pip install fellow-aiden",
-            "install_cmd": "pip install fellow-aiden"
-        }), 500
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+    except AidenError as e:
+        return jsonify({"error": str(e)}), 502
 
 
 # ─── Community Recipes ───────────────────────────────────────────────────────────
