@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { fmtTemp } from '../lib/format';
 import styles from './RatingRow.module.css';
 
 const RATINGS = [
@@ -14,10 +15,11 @@ const LEVER_LABELS = {
   ratio: 'Ratio',
 };
 
-export function RatingRow({ brewData, apiFetch }) {
+export function RatingRow({ brewData, apiFetch, tempUnit, onBrewAgain }) {
   const [selected, setSelected] = useState(null);
   const [saveStatus, setSaveStatus] = useState('idle');
   const [result, setResult] = useState(null);
+  const [savedBrew, setSavedBrew] = useState(null);
 
   const handleSave = async () => {
     if (!selected) return;
@@ -29,6 +31,7 @@ export function RatingRow({ brewData, apiFetch }) {
       });
       // Saving and dialing in are separate steps on purpose: history is
       // recorded even if the dial-in call fails.
+      setSavedBrew(brew);
       setSaveStatus('saved');
       try {
         const dialin = await apiFetch(`/brews/${brew.id}/rate`, {
@@ -93,7 +96,7 @@ export function RatingRow({ brewData, apiFetch }) {
                   <span class={styles.dialinValue}> → {next.grinder_display}</span>
                 )}
                 {next && adjustment.lever === 'temp' && (
-                  <span class={styles.dialinValue}> → {next.recipe?.temp_c}°C</span>
+                  <span class={styles.dialinValue}> → {fmtTemp(next.recipe?.temp_c, next.recipe?.temp_f, tempUnit)}</span>
                 )}
                 {next && adjustment.lever === 'ratio' && (
                   <span class={styles.dialinValue}> → 1:{next.ratio} ({next.dose_g}g)</span>
@@ -109,6 +112,16 @@ export function RatingRow({ brewData, apiFetch }) {
             </>
           ) : (
             <p class={styles.dialinReason}>{adjustment.reason}</p>
+          )}
+          {adjustment.freshness_note && (
+            <p class={styles.dialinNoted}>{adjustment.freshness_note}</p>
+          )}
+          {!adjustment.chain_complete && savedBrew && onBrewAgain && (
+            <button class={styles.againBtn} onClick={() => onBrewAgain(savedBrew.id)}>
+              {adjustment.lever
+                ? `Brew v${result.next_version} with this change →`
+                : `Brew v${result.next_version} again →`}
+            </button>
           )}
         </div>
       )}

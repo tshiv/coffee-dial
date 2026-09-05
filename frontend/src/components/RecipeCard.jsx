@@ -11,7 +11,7 @@ export function RecipeCard({ rec, tempUnit }) {
     ['Ratio', recipe.ratio],
   ];
 
-  const historyNotes = (bias_notes || []).filter(n => n.startsWith('History:'));
+  const historyNotes = (bias_notes || []).filter(n => n.startsWith('History:') || n.startsWith('Dial-in:'));
 
   return (
     <div>
@@ -25,7 +25,7 @@ export function RecipeCard({ rec, tempUnit }) {
       </div>
       {historyNotes.length > 0 && (
         <div class={styles.learningNote}>
-          {historyNotes.map(n => <p key={n}>{n.replace('History: ', '')}</p>)}
+          {historyNotes.map(n => <p key={n}>{n.replace(/^(History|Dial-in): /, '')}</p>)}
         </div>
       )}
     </div>

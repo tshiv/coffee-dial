@@ -110,3 +110,16 @@
   line-height: 1.5;
   color: var(--color-green);
 }
+
+.againBtn {
+  margin-top: 12px;
+  width: 100%;
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}

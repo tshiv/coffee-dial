@@ -1,0 +1,244 @@
+.shelf {
+  margin-bottom: 20px;
+}
+
+.labelRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--color-text-muted);
+}
+
+.addBtn {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.empty {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  padding: 12px 0;
+}
+
+.error {
+  font-size: 12px;
+  color: var(--color-red);
+  margin-top: 6px;
+}
+
+.bag {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  transition: border-color 0.15s;
+}
+
+.bagSelected {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.bagHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.bagMain {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  min-width: 0;
+}
+
+.bagName {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.selectedTag {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.bagMeta {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.bagSummary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.bagLast {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.expandBtn {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  width: 28px;
+  height: 28px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.dateRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.dateInput {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  font-size: 13px;
+  border: 1px dashed var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.actions {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+}
+
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.smallBtn {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.smallBtn:hover {
+  border-color: var(--color-accent);
+}
+
+.smallBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.dangerBtn {
+  background: none;
+  border: 1px solid var(--color-red);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--color-red);
+  cursor: pointer;
+}
+
+.confirmText {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  flex-basis: 100%;
+}
+
+.detailRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.detailLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.select {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 13px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.storageHint {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+  margin: 6px 0 10px;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 12px;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.details dt {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.details dd {
+  margin: 0;
+  color: var(--color-text-secondary);
+}

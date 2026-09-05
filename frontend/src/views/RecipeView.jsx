@@ -6,10 +6,16 @@ import { SimpleDrip } from '../components/SimpleDrip';
 import { PourOverSteps } from '../components/PourOverSteps';
 import { BrewTimer } from '../components/BrewTimer';
 import { RatingRow } from '../components/RatingRow';
+import { FreshnessLine } from '../components/FreshnessLine';
 import { fmtTemp, formatTime } from '../lib/format';
 import styles from './RecipeView.module.css';
 
-export function RecipeView({ coffeeData, brewOz, grinderId, grinderName, brewerId, brewerName, tempUnit, apiFetch, onBack, onStartOver }) {
+const LEVER_LABELS = { grind: 'grind', temp: 'temperature', ratio: 'ratio' };
+
+export function RecipeView({
+  coffeeData, bag, parentBrewId, brewOz, grinderId, grinderName, brewerId, brewerName,
+  tempUnit, apiFetch, onSetRoastDate, onBrewAgain, onBack, onStartOver,
+}) {
   const [rec, setRec] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -30,6 +36,7 @@ export function RecipeView({ coffeeData, brewOz, grinderId, grinderName, brewerI
         grinder_id: grinderId,
         brewer_id: brewerId,
         oz: brewOz,
+        parent_brew_id: parentBrewId || undefined,
       }),
     })
       .then(data => { setRec(data); setLoading(false); })
@@ -132,20 +139,32 @@ export function RecipeView({ coffeeData, brewOz, grinderId, grinderName, brewerI
 
   const tags = [coffeeData.roast, coffeeData.origin, coffeeData.process].filter(Boolean);
 
+  // Field names match the brews table — anything else is silently dropped
+  // by the server.
   const brewData = {
     coffee_name: coffeeData.coffee_name,
     roaster: coffeeData.roaster,
     roast: coffeeData.roast,
     origin: coffeeData.origin,
+    process: coffeeData.process,
     grinder_id: grinderId,
     brewer_id: brewerId,
-    grind_setting: rec.grinder_display,
+    grind: rec.grinder_setting,
+    grinder_setting_display: rec.grinder_display,
+    target_microns: rec.target_microns,
     brew_oz: brewOz,
     dose_g: recipe.dose_g,
     water_g: recipe.water_g,
-    temp_f: recipe.temp_f,
+    temp_c: recipe.temp_c,
     ratio: recipe.ratio,
+    recipe_json: JSON.stringify(recipe),
+    bag_id: bag?.id ?? null,
+    parent_brew_id: parentBrewId ?? null,
+    version: rec.version ?? 1,
   };
+
+  const version = rec.version ?? 1;
+  const adjustment = rec.adjustment;
 
   return (
     <div>
@@ -160,7 +179,21 @@ export function RecipeView({ coffeeData, brewOz, grinderId, grinderName, brewerI
       )}
       <p class={styles.context}>
         Brewing {brewOz}oz on {grinderName} &rsaquo; {brewerName}
+        {version > 1 && ` · v${version}`}
       </p>
+
+      {version > 1 && (
+        <div class={styles.versionBanner}>
+          <span class={styles.versionTag}>v{version}</span>
+          <span class={styles.versionText}>
+            {adjustment?.lever
+              ? <>One change from v{version - 1}: <strong>{LEVER_LABELS[adjustment.lever] || adjustment.lever}</strong>. {adjustment.reason}</>
+              : <>Same recipe as v{version - 1}. {adjustment?.reason || ''}</>}
+          </span>
+        </div>
+      )}
+
+      <FreshnessLine bag={bag} onSetRoastDate={onSetRoastDate} />
 
       <hr class={styles.divider} />
 
@@ -236,7 +269,7 @@ export function RecipeView({ coffeeData, brewOz, grinderId, grinderName, brewerI
         </div>
       )}
 
-      <RatingRow brewData={brewData} apiFetch={apiFetch} />
+      <RatingRow brewData={brewData} apiFetch={apiFetch} tempUnit={tempUnit} onBrewAgain={onBrewAgain} />
 
       <button class={styles.startOverBtn} onClick={onStartOver}>
         Brew something else

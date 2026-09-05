@@ -1,6 +1,8 @@
 # Spec — Freshness windows, one-lever dial-in, Aiden profile cleanup
 
-Status: Steps 1-3 built and tested 2026-09-03. Step 4 (Aiden delete) still proposed — held for sign-off.
+Status: Steps 1-3 built and tested 2026-09-03; frontend for all three wired 2026-09-05
+(see `backlog.md`, "Shipped since the first draft"). Step 4 (Aiden delete) still
+proposed — held for sign-off.
 
 ## What we're building
 
@@ -287,8 +289,11 @@ Scan these — a wrong one is cheap to fix now and expensive later.
 1. **Ratings stay four-valued.** Reusing `good/bright/flat/bitter` rather than
    adding `sour/weak/harsh`. If you want a finer defect vocabulary, say so now;
    it changes the lever table and needs a migration.
-2. **One bag per coffee at a time.** Rebuying the same coffee resets the clock
-   on the existing row rather than creating a second bag.
+2. **One bag per coffee at a time.** ~~Rebuying the same coffee resets the clock
+   on the existing row rather than creating a second bag.~~ **Changed 2026-09-05:**
+   rebuy finishes the old row and inserts a new one (`POST /api/bags/<id>/rebuy`).
+   Brews point at a bag by id and snapshot its freshness at brew time; resetting
+   the roast date under them would have made every earlier snapshot a lie.
 3. **A brew belongs to at most one bag.** `bag_id` is nullable, so brews logged
    without a bag keep working exactly as today. Nothing existing breaks.
 4. **Freshness never blocks a recommendation.** A tired or resting bag shows a

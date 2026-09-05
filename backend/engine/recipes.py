@@ -1,56 +1,15 @@
 """
-Brew recipe builders — generate method-specific instructions.
+Brew recipe builders — turn decided targets into method-specific instructions.
 
-Each builder takes (brewer, coffee_data, target_microns, dose_g, water_g)
-and returns a recipe dict with type-specific structure.
+Each builder takes (brewer, coffee_data, targets) where `targets` carries
+target_microns, temp_c, ratio, dose_g and water_g, already offset and clamped
+by the recommendation engine. Builders format; they do not decide numbers.
 """
 
-import math
-
-from .grind import get_origin_temp_offset, get_process_temp_offset
-
-
-def _compute_temp_c(brewer, coffee_data):
-    """Compute brew temperature in Celsius, applying origin/process offsets."""
-    params = brewer.get("parameters", {})
-    temp_param = params.get("temp_c", {})
-
-    # Fixed temp (e.g., Moccamaster)
-    if "fixed" in temp_param:
-        return temp_param["fixed"]
-
-    base = temp_param.get("default", 94)
-    origin = coffee_data.get("origin", "")
-    process = coffee_data.get("process", "")
-
-    offset = get_origin_temp_offset(origin) + get_process_temp_offset(process)
-    temp = base + offset
-
-    # Clamp to brewer's range
-    temp_min = temp_param.get("min", 85)
-    temp_max = temp_param.get("max", 100)
-    return round(max(temp_min, min(temp_max, temp)), 1)
 
 
 def _c_to_f(temp_c):
     return round(temp_c * 9 / 5 + 32, 1)
-
-
-def _get_ratio(brewer, coffee_data):
-    """Determine brew ratio based on brewer defaults and roast level."""
-    params = brewer.get("parameters", {})
-    ratio_param = params.get("ratio", {})
-    base_ratio = ratio_param.get("default", 16)
-
-    roast = coffee_data.get("roast", "medium")
-    roast_adjustments = {
-        "light": +0.5,
-        "medium-light": +0.25,
-        "medium": 0,
-        "medium-dark": -0.25,
-        "dark": -0.5,
-    }
-    return round(base_ratio + roast_adjustments.get(roast, 0), 1)
 
 
 def _bloom_params(coffee_data):
@@ -66,13 +25,23 @@ def _bloom_params(coffee_data):
     return bloom_table.get(roast, bloom_table["medium"])
 
 
+def _core(targets):
+    """The fields every recipe shape shares."""
+    temp_c = targets["temp_c"]
+    return {
+        "temp_c": temp_c,
+        "temp_f": _c_to_f(temp_c),
+        "ratio": targets["ratio"],
+        "dose_g": round(targets["dose_g"], 1),
+        "water_g": round(targets["water_g"]),
+    }
+
+
 # ─── Recipe Builders ──────────────────────────────────────────────────────────
 
-def build_aiden_profile(brewer, coffee_data, target_microns, dose_g, water_g):
+def build_aiden_profile(brewer, coffee_data, targets):
     """Fellow Aiden machine profile with all programmable parameters."""
     roast = coffee_data.get("roast", "medium")
-    temp_c = _compute_temp_c(brewer, coffee_data)
-    ratio = _get_ratio(brewer, coffee_data)
     bloom = _bloom_params(coffee_data)
 
     # Pulse count varies by roast
@@ -87,11 +56,7 @@ def build_aiden_profile(brewer, coffee_data, target_microns, dose_g, water_g):
 
     return {
         "type": "aiden_profile",
-        "temp_c": temp_c,
-        "temp_f": _c_to_f(temp_c),
-        "ratio": ratio,
-        "dose_g": round(dose_g, 1),
-        "water_g": round(water_g),
+        **_core(targets),
         "bloom_time_s": bloom["bloom_dur"],
         "bloom_ratio": bloom["bloom_ratio"],
         "pulses": pulses["pulses"],
@@ -99,14 +64,13 @@ def build_aiden_profile(brewer, coffee_data, target_microns, dose_g, water_g):
     }
 
 
-def build_pour_over_steps(brewer, coffee_data, target_microns, dose_g, water_g):
+def build_pour_over_steps(brewer, coffee_data, targets):
     """Step-by-step pour-over recipe (V60, Chemex, Kalita, Stagg)."""
-    temp_c = _compute_temp_c(brewer, coffee_data)
-    ratio = _get_ratio(brewer, coffee_data)
+    core = _core(targets)
     bloom = _bloom_params(coffee_data)
-    bloom_water = round(dose_g * bloom["bloom_ratio"])
+    bloom_water = round(core["dose_g"] * bloom["bloom_ratio"])
 
-    total_water = round(water_g)
+    total_water = core["water_g"]
     remaining = total_water - bloom_water
     pour_1 = round(remaining * 0.55)
     pour_2 = remaining - pour_1
@@ -123,32 +87,25 @@ def build_pour_over_steps(brewer, coffee_data, target_microns, dose_g, water_g):
 
     return {
         "type": "pour_over_steps",
-        "temp_c": temp_c,
-        "temp_f": _c_to_f(temp_c),
-        "ratio": ratio,
-        "dose_g": round(dose_g, 1),
-        "water_g": total_water,
+        **core,
         "steps": steps,
         "target_total_time_s": bloom["bloom_dur"] + 30 + 15 + 25 + 60,
     }
 
 
-def build_immersion_steps(brewer, coffee_data, target_microns, dose_g, water_g):
+def build_immersion_steps(brewer, coffee_data, targets):
     """Immersion brew recipe (French Press, Clever Dripper)."""
-    temp_c = _compute_temp_c(brewer, coffee_data)
-    ratio = _get_ratio(brewer, coffee_data)
+    core = _core(targets)
+    water_g = core["water_g"]
 
     params = brewer.get("parameters", {})
-    steep_param = params.get("steep_time", {})
-    steep_time = steep_param.get("default", 240)
-
-    method = brewer.get("method", "immersion")
+    steep_time = params.get("steep_time", {}).get("default", 240)
     is_clever = "clever" in brewer.get("name", "").lower()
 
     if is_clever:
         steps = [
-            {"action": "add_water", "water_g": round(water_g),
-             "note": f"Pour all {round(water_g)}g of water over grounds."},
+            {"action": "add_water", "water_g": water_g,
+             "note": f"Pour all {water_g}g of water over grounds."},
             {"action": "stir", "duration_s": 10,
              "note": "Gentle stir to saturate all grounds."},
             {"action": "steep", "duration_s": steep_time,
@@ -157,8 +114,8 @@ def build_immersion_steps(brewer, coffee_data, target_microns, dose_g, water_g):
         ]
     else:
         steps = [
-            {"action": "add_water", "water_g": round(water_g),
-             "note": f"Pour all {round(water_g)}g of water over grounds."},
+            {"action": "add_water", "water_g": water_g,
+             "note": f"Pour all {water_g}g of water over grounds."},
             {"action": "stir", "duration_s": 10,
              "note": "Gentle stir to saturate all grounds."},
             {"action": "steep", "duration_s": steep_time,
@@ -168,29 +125,25 @@ def build_immersion_steps(brewer, coffee_data, target_microns, dose_g, water_g):
 
     return {
         "type": "immersion_steps",
-        "temp_c": temp_c,
-        "temp_f": _c_to_f(temp_c),
-        "ratio": ratio,
-        "dose_g": round(dose_g, 1),
-        "water_g": round(water_g),
+        **core,
         "steep_time_s": steep_time,
         "steps": steps,
     }
 
 
-def build_aeropress_steps(brewer, coffee_data, target_microns, dose_g, water_g):
+def build_aeropress_steps(brewer, coffee_data, targets):
     """AeroPress recipe — standard method."""
-    temp_c = _compute_temp_c(brewer, coffee_data)
-    ratio = _get_ratio(brewer, coffee_data)
+    core = _core(targets)
+    water_g = core["water_g"]
 
     params = brewer.get("parameters", {})
     steep_time = params.get("steep_time", {}).get("default", 90)
 
     steps = [
         {"action": "setup", "note": "Place filter in cap, rinse with hot water, attach to chamber on mug."},
-        {"action": "add_coffee", "note": f"Add {round(dose_g, 1)}g of ground coffee."},
-        {"action": "add_water", "water_g": round(water_g),
-         "note": f"Pour {round(water_g)}g of water at {_c_to_f(temp_c)}°F."},
+        {"action": "add_coffee", "note": f"Add {core['dose_g']}g of ground coffee."},
+        {"action": "add_water", "water_g": water_g,
+         "note": f"Pour {water_g}g of water at {core['temp_f']}°F."},
         {"action": "stir", "duration_s": 10, "note": "Stir gently for 10 seconds."},
         {"action": "steep", "duration_s": steep_time,
          "note": f"Wait {steep_time} seconds total."},
@@ -200,46 +153,29 @@ def build_aeropress_steps(brewer, coffee_data, target_microns, dose_g, water_g):
 
     return {
         "type": "aeropress_steps",
-        "temp_c": temp_c,
-        "temp_f": _c_to_f(temp_c),
-        "ratio": ratio,
-        "dose_g": round(dose_g, 1),
-        "water_g": round(water_g),
+        **core,
         "steep_time_s": steep_time,
         "steps": steps,
     }
 
 
-def build_simple_drip(brewer, coffee_data, target_microns, dose_g, water_g):
+def build_simple_drip(brewer, coffee_data, targets):
     """Simple automatic brewer — grind + dose is all you control."""
-    temp_c = _compute_temp_c(brewer, coffee_data)
-    ratio = _get_ratio(brewer, coffee_data)
-
+    core = _core(targets)
     return {
         "type": "simple_drip",
-        "temp_c": temp_c,
-        "temp_f": _c_to_f(temp_c),
-        "ratio": ratio,
-        "dose_g": round(dose_g, 1),
-        "water_g": round(water_g),
-        "water_oz": round(water_g / 29.5735, 1),
+        **core,
+        "water_oz": round(core["water_g"] / 29.5735, 1),
         "note": "Grind size and dose are your main variables. Temperature is set by the machine.",
     }
 
 
-def build_precision_drip(brewer, coffee_data, target_microns, dose_g, water_g):
+def build_precision_drip(brewer, coffee_data, targets):
     """Precision automatic brewer with temp/bloom control (e.g., Breville Precision Brewer)."""
-    temp_c = _compute_temp_c(brewer, coffee_data)
-    ratio = _get_ratio(brewer, coffee_data)
     bloom = _bloom_params(coffee_data)
-
     return {
         "type": "precision_drip",
-        "temp_c": temp_c,
-        "temp_f": _c_to_f(temp_c),
-        "ratio": ratio,
-        "dose_g": round(dose_g, 1),
-        "water_g": round(water_g),
+        **_core(targets),
         "bloom_dur": bloom["bloom_dur"],
         "flow_rate": "medium",
         "note": "Use 'My Brew' mode. Set temperature and bloom time. Medium flow rate for most coffees.",
@@ -258,8 +194,8 @@ RECIPE_BUILDERS = {
 }
 
 
-def build_recipe(brewer, coffee_data, target_microns, dose_g, water_g):
+def build_recipe(brewer, coffee_data, targets):
     """Dispatch to the correct recipe builder based on brewer type."""
     recipe_type = brewer.get("recipe_type", "simple_drip")
     builder = RECIPE_BUILDERS.get(recipe_type, build_simple_drip)
-    return builder(brewer, coffee_data, target_microns, dose_g, water_g)
+    return builder(brewer, coffee_data, targets)

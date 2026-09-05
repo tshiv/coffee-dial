@@ -176,3 +176,86 @@ def test_chain_takes_precedence_over_aggregate_history():
     # The aggregate bias fires without a chain and is suppressed with one.
     assert any("History:" in n for n in with_history["bias_notes"])
     assert not any("History:" in n for n in with_chain["bias_notes"])
+
+
+# ─── Levers the brewer cannot move ────────────────────────────────────────────
+
+def test_comma_joined_stored_rating_reads_back_as_several():
+    """rate_brew stores two ratings as 'bitter,flat'; that must round-trip."""
+    assert dialin.normalize_ratings("bitter,flat") == ["bitter", "flat"]
+    adj = dialin.next_adjustment("bitter,flat")
+    assert adj["lever"] == "grind"
+    assert adj["noted"] == ["flat"]
+
+
+def test_bright_falls_back_to_finer_grind_when_temp_is_blocked():
+    headroom = {m: None for m in dialin.MOVES}
+    headroom["temp+"] = "Temperature is fixed at 96°C on this brewer."
+    adj = dialin.next_adjustment("bright", headroom)
+    assert adj["lever"] == "grind"
+    assert adj["delta"] < 0
+    assert "fixed" in adj["reason"]
+
+
+def test_bitter_falls_back_to_cooler_when_grind_is_at_max():
+    headroom = {m: None for m in dialin.MOVES}
+    headroom["grind+"] = "Already at the brewer's max grind (1000µm)."
+    adj = dialin.next_adjustment("bitter", headroom)
+    assert adj["lever"] == "temp"
+    assert adj["delta"] < 0
+
+
+def test_no_open_lever_moves_nothing_and_says_why():
+    headroom = {m: "blocked" for m in dialin.MOVES}
+    adj = dialin.next_adjustment("flat", headroom)
+    assert adj["lever"] is None
+    assert adj["chain_complete"] is False
+    assert "blocked" in adj["reason"]
+
+
+def test_no_headroom_means_everything_is_open():
+    assert dialin.next_adjustment("bright", None)["lever"] == "temp"
+    assert dialin.next_adjustment("bright", {})["lever"] == "temp"
+
+
+# ─── Freshness colours the reading ────────────────────────────────────────────
+
+def test_flat_from_a_tired_bag_does_not_touch_the_ratio():
+    adj = dialin.next_adjustment("flat", bag_phase="tired")
+    assert adj["lever"] is None
+    assert adj["chain_complete"] is False
+    assert "tired" in adj["reason"]
+
+
+def test_bitter_from_a_tired_bag_still_moves_but_is_flagged():
+    adj = dialin.next_adjustment("bitter", bag_phase="tired")
+    assert adj["lever"] == "grind"
+    assert "tired" in adj["freshness_note"]
+
+
+def test_fresh_bag_has_no_freshness_note():
+    assert "freshness_note" not in dialin.next_adjustment("bitter", bag_phase="ready")
+
+
+# ─── The child brew's chain ───────────────────────────────────────────────────
+
+def test_child_chain_is_parent_chain_plus_parent_rating():
+    parent = {
+        "rating": "bright", "version": 2,
+        "chain_micron_delta": 30.0, "chain_temp_delta_c": 0.0, "chain_ratio_delta": 0.0,
+        "bag_phase": None,
+    }
+    chain, version, adj = dialin.chain_for_child(parent)
+    assert version == 3
+    assert adj["lever"] == "temp"
+    # v2's coarser grind is kept, and v2's bright rating adds heat on top.
+    assert chain == {"micron_delta": 30.0, "temp_delta_c": 2.0, "ratio_delta": 0.0}
+
+
+def test_child_of_an_unrated_parent_inherits_unchanged():
+    parent = {"rating": None, "version": None, "chain_micron_delta": 60.0,
+              "chain_temp_delta_c": None, "chain_ratio_delta": None}
+    chain, version, adj = dialin.chain_for_child(parent)
+    assert version == 2
+    assert adj["lever"] is None
+    assert chain["micron_delta"] == 60.0
