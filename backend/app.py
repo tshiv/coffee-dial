@@ -13,9 +13,10 @@ Endpoints:
   POST /api/history           — Save a brew entry
   PUT  /api/history/<id>      — Update a brew entry (e.g. add rating)
   DELETE /api/history/<id>    — Delete a brew entry
-  GET  /api/bags              — List bags with computed freshness
+  GET  /api/bags              — List bags with computed freshness and last brew
   POST /api/bags              — Create a bag
   PUT  /api/bags/<id>         — Update a bag (roast date, open, freeze, thaw)
+  POST /api/bags/<id>/rebuy   — Finish a bag and start a fresh one of the same coffee
   DELETE /api/bags/<id>       — Delete a bag
   POST /api/brews/<id>/rate   — Rate a brew, get the one change for the next
   GET  /api/presets           — Get volume presets
@@ -35,7 +36,7 @@ from flask_cors import CORS
 
 from ai.parsing import call_ai
 from ai.recipe_search import search_roaster_recipe
-from engine.recommend import build_recommendation
+from engine.recommend import build_recommendation, lever_headroom
 from engine import freshness
 from engine import dialin
 from equipment.loader import get_grinder, get_brewer, list_equipment
@@ -153,6 +154,13 @@ def _migrate_brews(conn):
         # Freshness: which bag this brew came from. Nullable, so brews logged
         # without a bag keep working exactly as before.
         "bag_id": "INTEGER",
+        # Freshness as it was when the brew was made. Snapshotted so the
+        # question "were my bitter cups from tired bags?" is one query, and
+        # survives the bag being rebought or its freeze cleared later.
+        "bag_phase": "TEXT",
+        "bag_age_days": "REAL",
+        "bag_open_age_days": "REAL",
+        "bag_storage": "TEXT",
         # One-lever dial-in chain.
         "parent_brew_id": "INTEGER",
         "version": "INTEGER",
@@ -331,20 +339,26 @@ def recommend():
     if not brewer:
         return jsonify({"error": f"Unknown brewer: {brewer_id}"}), 400
 
-    # An explicit chain wins; otherwise inherit the parent brew's accumulated
-    # deltas so a follow-up recommendation continues the same dial-in.
+    # An explicit chain wins; otherwise the parent brew's chain plus the one
+    # move its rating calls for, so a follow-up continues the same dial-in.
     chain = data.get("chain")
     parent_brew_id = data.get("parent_brew_id")
+    version = data.get("version") or 1
+    adjustment = None
 
     with get_db() as conn:
         rows = conn.execute("SELECT roast, rating FROM brews WHERE rating IS NOT NULL").fetchall()
         if chain is None and parent_brew_id:
-            parent = conn.execute(
-                "SELECT * FROM brews WHERE id = ?", (parent_brew_id,)
-            ).fetchone()
-            chain = dialin.chain_from_row(parent)
+            try:
+                chain, version, adjustment, _ = _chain_for_child(conn, parent_brew_id)
+            except LookupError as e:
+                return jsonify({"error": str(e)}), 404
 
     rec = build_recommendation(coffee_data, grinder, brewer, oz, rows, chain=chain)
+    rec["version"] = version
+    rec["parent_brew_id"] = parent_brew_id if chain is not None else None
+    if adjustment is not None:
+        rec["adjustment"] = adjustment
     return jsonify(rec)
 
 
@@ -359,20 +373,57 @@ def get_history():
         ).fetchall()
     return jsonify([dict(r) for r in rows])
 
+BREW_FIELDS = ["timestamp", "bag_text", "coffee_name", "roast", "origin", "process", "roaster",
+               "grinder_id", "brewer_id", "grind", "grinder_setting_display", "target_microns",
+               "temp_c", "ratio", "dose_g", "water_g", "brew_oz",
+               "recipe_json", "preset_name", "rating", "notes", "rationale",
+               "bag_id", "bag_phase", "bag_age_days", "bag_open_age_days", "bag_storage",
+               "parent_brew_id", "version",
+               "chain_micron_delta", "chain_temp_delta_c", "chain_ratio_delta"]
+
+CHAIN_COLUMNS = {
+    "chain_micron_delta": "micron_delta",
+    "chain_temp_delta_c": "temp_delta_c",
+    "chain_ratio_delta": "ratio_delta",
+}
+
+
 @app.route("/api/history", methods=["POST"])
 def post_history():
     data = request.json or {}
     data["timestamp"] = data.get("timestamp", int(time.time() * 1000))
-    fields = ["timestamp", "bag_text", "coffee_name", "roast", "origin", "process", "roaster",
-              "grinder_id", "brewer_id", "grind", "grinder_setting_display", "target_microns",
-              "temp_c", "ratio", "dose_g", "water_g", "brew_oz",
-              "recipe_json", "preset_name", "rating", "notes", "rationale",
-              "bag_id", "parent_brew_id", "version",
-              "chain_micron_delta", "chain_temp_delta_c", "chain_ratio_delta"]
-    vals = {f: data.get(f) for f in fields}
-    cols = ", ".join(vals.keys())
-    placeholders = ", ".join(["?"] * len(vals))
+    vals = {f: data.get(f) for f in BREW_FIELDS}
+
     with get_db() as conn:
+        # A child brew inherits its chain and version from the parent unless
+        # the caller spelled them out. Server-side, so the frontend only has
+        # to carry one id.
+        parent_brew_id = data.get("parent_brew_id")
+        if parent_brew_id and not any(data.get(c) is not None for c in CHAIN_COLUMNS):
+            try:
+                chain, version, _, _ = _chain_for_child(conn, parent_brew_id)
+            except LookupError as e:
+                return jsonify({"error": str(e)}), 400
+            for col, key in CHAIN_COLUMNS.items():
+                vals[col] = chain[key]
+            if vals["version"] is None:
+                vals["version"] = version
+        if vals["version"] is None:
+            vals["version"] = 1
+
+        # Snapshot the bag's freshness at brew time.
+        if vals["bag_id"]:
+            bag = conn.execute("SELECT * FROM bags WHERE id = ?", (vals["bag_id"],)).fetchone()
+            if bag is None:
+                return jsonify({"error": f"Bag {vals['bag_id']} not found"}), 400
+            read = freshness.compute_phase(dict(bag), vals["timestamp"] // 1000)
+            vals["bag_phase"] = read["phase"]
+            vals["bag_age_days"] = read.get("age_days")
+            vals["bag_open_age_days"] = read.get("open_age_days")
+            vals["bag_storage"] = bag["storage"]
+
+        cols = ", ".join(vals.keys())
+        placeholders = ", ".join(["?"] * len(vals))
         cur = conn.execute(f"INSERT INTO brews ({cols}) VALUES ({placeholders})", list(vals.values()))
         conn.commit()
         row = conn.execute("SELECT * FROM brews WHERE id = ?", (cur.lastrowid,)).fetchone()
@@ -422,6 +473,31 @@ def _bag_with_freshness(row, now=None):
     return bag
 
 
+def _attach_brews(conn, bag):
+    """How many brews came from this bag, and the latest one — the dial-in
+    chain's natural parent for the next brew."""
+    bag["brew_count"] = conn.execute(
+        "SELECT COUNT(*) FROM brews WHERE bag_id = ?", (bag["id"],)
+    ).fetchone()[0]
+    last = conn.execute(
+        "SELECT id, timestamp, version, rating, bag_phase FROM brews "
+        "WHERE bag_id = ? ORDER BY timestamp DESC, id DESC LIMIT 1", (bag["id"],)
+    ).fetchone()
+    if last is None:
+        bag["last_brew"] = None
+    else:
+        ratings = dialin.normalize_ratings(last["rating"])
+        bag["last_brew"] = {
+            "id": last["id"],
+            "timestamp": last["timestamp"],
+            "version": last["version"] or 1,
+            "rating": last["rating"],
+            "bag_phase": last["bag_phase"],
+            "chain_complete": "good" in ratings,
+        }
+    return bag
+
+
 @app.route("/api/bags", methods=["GET"])
 def get_bags():
     include_finished = request.args.get("include_finished") == "1"
@@ -431,7 +507,8 @@ def get_bags():
     query += " ORDER BY created_at DESC"
     with get_db() as conn:
         rows = conn.execute(query).fetchall()
-    return jsonify([_bag_with_freshness(r) for r in rows])
+        bags = [_attach_brews(conn, _bag_with_freshness(r)) for r in rows]
+    return jsonify(bags)
 
 
 @app.route("/api/bags", methods=["POST"])
@@ -485,6 +562,39 @@ def delete_bag(bag_id):
     return jsonify({"ok": True})
 
 
+@app.route("/api/bags/<int:bag_id>/rebuy", methods=["POST"])
+def rebuy_bag(bag_id):
+    """Finish this bag and start a new row for the same coffee.
+
+    A new row rather than a reset of the old one: brews point at a bag by id,
+    and their freshness snapshots only stay meaningful if the bag they point
+    at keeps its roast date.
+    """
+    data = request.json or {}
+    now = int(time.time())
+    with get_db() as conn:
+        old = conn.execute("SELECT * FROM bags WHERE id = ?", (bag_id,)).fetchone()
+        if old is None:
+            return jsonify({"error": "Bag not found"}), 404
+        if old["finished_at"] is None:
+            conn.execute("UPDATE bags SET finished_at = ? WHERE id = ?", (now, bag_id))
+
+        vals = {f: old[f] for f in ("coffee_name", "roaster", "roast", "origin",
+                                    "process", "is_decaf", "notes")}
+        vals["storage"] = data.get("storage") or old["storage"] or freshness.DEFAULT_STORAGE
+        vals["roast_date"] = data.get("roast_date")
+        vals["created_at"] = now
+        cols = ", ".join(vals.keys())
+        placeholders = ", ".join(["?"] * len(vals))
+        cur = conn.execute(
+            f"INSERT INTO bags ({cols}) VALUES ({placeholders})", list(vals.values())
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM bags WHERE id = ?", (cur.lastrowid,)).fetchone()
+        bag = _attach_brews(conn, _bag_with_freshness(row))
+    return jsonify(bag), 201
+
+
 # ─── Dial-in ──────────────────────────────────────────────────────────────────
 
 @app.route("/api/brews/<int:brew_id>/rate", methods=["POST"])
@@ -510,33 +620,59 @@ def rate_brew(brew_id):
         conn.commit()
         brew = conn.execute("SELECT * FROM brews WHERE id = ?", (brew_id,)).fetchone()
 
-    adjustment = dialin.next_adjustment(rating_list)
-    next_chain = dialin.apply_adjustment(dialin.chain_from_row(brew), adjustment)
+    next_chain, next_version, adjustment = dialin.chain_for_child(brew, _headroom_for_brew(brew))
 
     response = {
         "brew_id": brew_id,
         "adjustment": adjustment,
         "next_chain": next_chain,
-        "next_version": (brew["version"] or 1) + 1,
+        "next_version": next_version,
         "chain_complete": adjustment["chain_complete"],
     }
 
     # When something actually moved, show what the next brew would look like.
-    if adjustment["lever"] and brew["grinder_id"] and brew["brewer_id"]:
-        grinder = get_grinder(brew["grinder_id"])
-        brewer = get_brewer(brew["brewer_id"])
+    if adjustment["lever"]:
+        grinder = get_grinder(brew["grinder_id"] or "")
+        brewer = get_brewer(brew["brewer_id"] or "")
         if grinder and brewer:
-            coffee_data = {
-                "roast": brew["roast"],
-                "origin": brew["origin"],
-                "process": brew["process"],
-                "name": brew["coffee_name"],
-            }
             response["next_recommendation"] = build_recommendation(
-                coffee_data, grinder, brewer, brew["brew_oz"] or 12, [], chain=next_chain
+                _coffee_from_brew(brew), grinder, brewer, brew["brew_oz"] or 12, [],
+                chain=next_chain,
             )
 
     return jsonify(response)
+
+
+def _coffee_from_brew(brew):
+    return {
+        "roast": brew["roast"],
+        "origin": brew["origin"],
+        "process": brew["process"],
+        "coffee_name": brew["coffee_name"],
+    }
+
+
+def _headroom_for_brew(brew):
+    """Which dial-in moves the brew's own brewer still has room for."""
+    brewer = get_brewer(brew["brewer_id"] or "")
+    if brewer is None:
+        return None
+    return lever_headroom(
+        _coffee_from_brew(brew), brewer, brew["brew_oz"] or 12, dialin.chain_from_row(brew)
+    )
+
+
+def _chain_for_child(conn, parent_brew_id):
+    """Chain, version and adjustment for the brew that follows `parent_brew_id`.
+
+    Raises LookupError when the parent does not exist — a wrong id should be
+    loud, not a silent restart from v1.
+    """
+    parent = conn.execute("SELECT * FROM brews WHERE id = ?", (parent_brew_id,)).fetchone()
+    if parent is None:
+        raise LookupError(f"Parent brew {parent_brew_id} not found")
+    chain, version, adjustment = dialin.chain_for_child(parent, _headroom_for_brew(parent))
+    return chain, version, adjustment, parent
 
 
 # ─── Presets ──────────────────────────────────────────────────────────────────

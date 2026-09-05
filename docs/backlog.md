@@ -1,50 +1,62 @@
 # Backlog
 
-Ideas raised and not built, with enough context to pick up cold. Written
-2026-09-05, at the end of the session that shipped freshness windows, one-lever
-dial-in, and the Aiden client.
+Ideas raised and not built, with enough context to pick up cold. First
+written 2026-09-05 at the end of the session that shipped freshness windows,
+one-lever dial-in, and the Aiden client; revised the same day after the
+session that wired all of it into the frontend.
 
 Ordered by what unblocks the most.
 
 ---
 
-## 1. Freshness has no UI at all
+## Shipped since the first draft (2026-09-05)
 
-**The biggest gap in the current state.** Steps 1 and 2 of
-[the spec](spec-freshness-and-dialin.md) shipped as backend only. `GET/POST/PUT/DELETE
-/api/bags` all work and are tested, `engine/freshness.py` is fully unit-tested,
-and **nothing in the frontend calls any of it.**
+Items 1-3 of the original list are built. What landed, and what changed on
+the way:
 
-Needed:
-- A bag shelf: list bags with phase (`resting` / `ready` / `tired`), the ready
-  range, and days off roast
-- Create a bag, with a **required** roast date — a bag without one must show the
-  `awaiting_roast_date` prompt, never a fabricated window
-- Actions: open, freeze, thaw, finish, rebuy. All are already server-side
-- Storage picker (`bag_ambient` / `airtight` / `vacuum`), defaulting to `vacuum`
-- A freshness line on the recipe screen for the bag being brewed
+- **Bag shelf** on the input screen: list, add, open, freeze, thaw, finish,
+  rebuy, storage picker, delete. A bag with no roast date shows the
+  `awaiting_roast_date` prompt with an inline date field. Selecting a bag
+  fills the coffee identity; a search result can be saved as a bag.
+- **Freshness line** on the recipe screen, with the same inline prompt.
+- **The chain forms.** `/api/recommend` and `POST /api/history` derive a
+  child's chain and version from `parent_brew_id` server-side: the parent's
+  stored deltas plus the one move its stored rating calls for. The old
+  inherit path read the parent's own deltas and dropped its rating, and only
+  looked right because the aggregate history bias happened to add the same
+  30 microns. A parent rated `bright` would have produced a finer grind
+  instead of a hotter brew. The frontend now carries only a parent id.
+- **The bag is the chain's anchor.** `GET /api/bags` returns each bag's
+  `last_brew`; picking a bag whose last brew was rated offers "continue at
+  v(n+1)" or "start fresh". That is how the chain survives a closed tab.
+- **Every brew snapshots the bag** (`bag_phase`, `bag_age_days`,
+  `bag_open_age_days`, `bag_storage`) at brew time, so item 8 is a single
+  query and survives the bag being rebought.
+- **Rebuy is a new row**, not a reset of the old one (the spec's assumption 2
+  said reset). Brews point at bags by id; resetting the roast date under
+  them would have corrupted every earlier snapshot's meaning.
+- **Levers respect the brewer.** `recommend.lever_headroom()` reports which
+  moves are open; `bright` on a fixed-temperature machine falls back to a
+  finer grind, and `bitter` at the brewer's max grind falls back to cooler
+  water. Temperature and ratio are now clamped to the brewer's range. Before,
+  three `bright` ratings on an Aiden produced 104°C, and a Moccamaster got
+  98°C on a machine fixed at 96.
+- **Flat from a tired bag moves nothing.** Stale tastes flat; tuning the
+  ratio to that would bake a tired bag into the chain.
+- **Engine seams moved.** Temperature and ratio are decided once in
+  `recommend.compute_targets()` and handed to the recipe builders, which now
+  only format. The builders used to recompute ratio themselves, so a chain
+  ratio move changed the dose but the recipe still displayed (and history
+  stored) the old ratio.
+- **History payload fixed.** The recipe screen sent `grind_setting` and
+  `temp_f`, which the server silently dropped; history rows had no grind or
+  temperature. Now sends the brews-table names plus `process`,
+  `target_microns`, `recipe_json`, `bag_id`, `parent_brew_id`, `version`.
 
-Model the screen on `views/AidenProfilesView.jsx`, which is the newest pattern
-in the codebase.
-
-## 2. The dial-in chain does not persist across brews
-
-`RatingRow` shows the next change correctly (verified). But logging the *next*
-brew does not set `parent_brew_id`, so the v1 → v2 → v3 chain never actually
-forms — every brew starts from the base recommendation again.
-
-The backend is ready: `POST /api/history` accepts `parent_brew_id`, `version`,
-and the three `chain_*` columns, and `POST /api/recommend` accepts either an
-explicit `chain` or a `parent_brew_id` to inherit from.
-
-What's missing is frontend state: carry the rated brew's id and chain into the
-next recommendation request, and show which version you're on.
-
-## 3. Bags are not linked to brews
-
-`brews.bag_id` exists and is nullable. Nothing sets it. Until it does, freshness
-and brew history are two unrelated datasets, and questions like "did the cups I
-rated bitter come from bags past their window?" can't be asked.
+Not done from those three items: nothing intentional. Not verified in a
+browser: the "save a search result as a bag" prefill path, because the
+verification server had no AI key; the form it opens is the same component
+the shelf's "add bag" uses, which was exercised.
 
 ## 4. Phone capture — the actual want
 
@@ -95,12 +107,50 @@ notices, and `equipment/grinders.json` is just data.
 
 ## 8. Calibrate the freshness constants
 
-Every number in `engine/freshness.py` is a convention, not a measurement. The
-weakest is the `vacuum` open-clock multiplier (1.5×), which derives from a
-vendor marketing claim rather than any independent test.
+Every number in `engine/freshness.py` is a convention, not a measurement.
+The data to check them now accumulates on every brew (`bag_phase`,
+`bag_age_days`, `bag_open_age_days`, `bag_storage`, alongside `rating`).
 
-Once there are enough rated brews with bag ages attached (needs item 3), these
-can be checked against reality instead of taken on faith.
+Two things learned while wiring the UI, both worth knowing before touching
+the 1.5:
+
+**The `vacuum` multiplier is close to unobservable under the current
+constants.** The sealed clock (`TIRED_DAYS`: light 42, medium 30, dark 21)
+almost always ends the bag before the open clock does. The open clock can
+only be the binding one if the bag was opened before day
+`TIRED - open_limit`:
+
+| roast | tired (sealed) | bag_ambient (16.8d) | airtight (21d) | vacuum (31.5d) |
+|---|---|---|---|---|
+| light | 42 | opened before day 25 | before day 21 | before day 10.5 |
+| medium | 30 | before day 13 | before day 9 | never |
+| dark | 21 | before day 4 | never | never |
+
+So for a medium or dark roast, `vacuum` and `airtight` produce identical
+phases whenever the bag was opened after it finished resting, and no amount
+of ratings will separate 1.5 from 1.3 or 2.0. The only thing the ratings can
+identify is the *combined* tired day. Calibrate `TIRED_DAYS` first; the
+storage multiplier only matters once those are believed.
+
+**The constants contradict the model's own mechanism.** The spec says oxygen
+is the dominant staling driver, which is why storage touches only the open
+clock. But a sealed one-way-valve bag has almost no oxygen in it and still
+tires at 30 days on the sealed clock. If oxygen dominates, the sealed tired
+day should be much longer and the open clock should bind most of the time;
+if sealed bags really do tire at 30 days, something other than oxygen is
+doing it (volatile loss through the valve, lipid oxidation from residual
+O2), and a vacuum bonus of 50% is too generous. Pick one.
+
+What a better number would rest on:
+- For `TIRED_DAYS`: your own ratings vs `bag_age_days`, once there are ~30
+  rated brews per roast level. That is the identifiable quantity.
+- For the storage multiplier: a split-bag test. One bag, two halves, Atmos vs
+  a plain canister, both opened the same day, one cup from each per day,
+  rated blind. Three weeks. Nothing else will tell you.
+- For `READY_RANGE_DAYS`: the degassing literature gives the *shape* (darker
+  roasts degas faster; Smrke et al. 2017/2018 measured whole-bean CO2 loss
+  gravimetrically) but the "ready" threshold is a taste call, which the
+  ratings are for.
 
 ## 9. Operational: the database location
 

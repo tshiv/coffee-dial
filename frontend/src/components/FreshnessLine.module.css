@@ -1,0 +1,72 @@
+.line {
+  margin: 12px 0 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.warn {
+  border-color: color-mix(in srgb, var(--color-yellow) 60%, var(--color-border));
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: inline-block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.summary {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.message {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.dateRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.dateInput {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 13px;
+  border: 1px dashed var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.dateBtn {
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dateBtn:disabled {
+  opacity: 0.5;
+}
