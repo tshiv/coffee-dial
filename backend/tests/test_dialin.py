@@ -259,3 +259,52 @@ def test_child_of_an_unrated_parent_inherits_unchanged():
     assert version == 2
     assert adj["lever"] is None
     assert chain["micron_delta"] == 60.0
+
+
+# ─── Grind actually used ──────────────────────────────────────────────────────
+
+def test_child_starts_from_the_grind_actually_used():
+    """Ground 170µm finer than told, then rated flat: the finer grind is kept
+    and flat still only touches the ratio."""
+    parent = {"rating": "flat", "version": 1, "chain_micron_delta": 0.0,
+              "chain_temp_delta_c": 0.0, "chain_ratio_delta": 0.0, "bag_phase": None}
+    chain, version, adj = dialin.chain_for_child(parent, grind_offset_microns=-170.0)
+    assert version == 2
+    assert adj["lever"] == "ratio"
+    assert chain == {"micron_delta": -170.0, "temp_delta_c": 0.0, "ratio_delta": -0.5}
+
+
+def test_grind_offset_stacks_with_the_rating_move():
+    parent = {"rating": "bitter", "version": 1, "chain_micron_delta": 30.0,
+              "chain_temp_delta_c": 0.0, "chain_ratio_delta": 0.0, "bag_phase": None}
+    chain, _, adj = dialin.chain_for_child(parent, grind_offset_microns=-100.0)
+    assert adj["lever"] == "grind"
+    assert chain["micron_delta"] == 30.0 - 100.0 + dialin.MICRON_STEP
+
+
+def test_zero_offset_is_the_old_behaviour():
+    parent = {"rating": "bright", "version": 2, "chain_micron_delta": 30.0,
+              "chain_temp_delta_c": 0.0, "chain_ratio_delta": 0.0, "bag_phase": None}
+    with_zero = dialin.chain_for_child(parent, grind_offset_microns=0.0)
+    without = dialin.chain_for_child(parent)
+    assert with_zero == without
+
+
+def test_setting_to_microns_interpolates_fractional_settings():
+    from engine.grind import setting_to_microns, microns_to_setting
+    ode1 = get_grinder("fellow_ode_gen1")
+    assert setting_to_microns(ode1, 4) == 550
+    assert setting_to_microns(ode1, 4.1) == 560
+    assert setting_to_microns(ode1, 0) == 250      # clamps below the map
+    assert setting_to_microns(ode1, 99) == 1250    # clamps above it
+    # Round-trips through the forward map on whole steps.
+    for setting in range(1, 12):
+        assert microns_to_setting(ode1, setting_to_microns(ode1, setting)) == setting
+
+
+def test_setting_to_microns_handles_formula_and_unknown_grinders():
+    from engine.grind import setting_to_microns
+    formula = {"micron_formula": {"base_microns": 200, "microns_per_step": 25}}
+    assert setting_to_microns(formula, 10) == 450
+    assert setting_to_microns({"settings": {}}, 5) is None
+    assert setting_to_microns(formula, None) is None

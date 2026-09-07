@@ -12,6 +12,21 @@ import styles from './RecipeView.module.css';
 
 const LEVER_LABELS = { grind: 'grind', temp: 'temperature', ratio: 'ratio' };
 
+const CONFIDENCE_LABEL = {
+  high: 'High confidence · found the published recipe',
+  medium: 'Medium · adapted from what was found',
+  low: 'Low · nothing specific found, best guess',
+};
+const CONFIDENCE_STYLE = {
+  high: styles.badgeHigh,
+  medium: styles.badgeMedium,
+  low: styles.badgeLow,
+};
+
+function formatLookupDate(epochSec) {
+  return new Date(epochSec * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
 export function RecipeView({
   coffeeData, bag, parentBrewId, brewOz, grinderId, grinderName, brewerId, brewerName,
   tempUnit, apiFetch, onSetRoastDate, onBrewAgain, onBack, onStartOver,
@@ -25,6 +40,11 @@ export function RecipeView({
   const [roasterSearching, setRoasterSearching] = useState(false);
   const [brewLinkUrl, setBrewLinkUrl] = useState('');
   const [brewLinkStatus, setBrewLinkStatus] = useState('idle');
+  // The roaster's own recipe is looked up as soon as the view opens. It is
+  // the first thing shown, ahead of the computed estimate.
+  const [roasterRecipe, setRoasterRecipe] = useState(null);
+  const [roasterStatus, setRoasterStatus] = useState(coffeeData.roaster ? 'loading' : 'no_roaster');
+  const [roasterError, setRoasterError] = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -48,6 +68,30 @@ export function RecipeView({
       .then(data => setCommunityRecipes(Array.isArray(data) ? data : []))
       .catch(() => setCommunityRecipes([]));
   }, [brewerId]);
+
+  const lookupRoasterRecipe = async (refresh = false) => {
+    if (!coffeeData.roaster) return;
+    setRoasterStatus('loading');
+    setRoasterError('');
+    try {
+      const data = await apiFetch('/search-roaster-recipe', {
+        method: 'POST',
+        body: JSON.stringify({
+          roaster: coffeeData.roaster,
+          coffee_name: coffeeData.coffee_name,
+          brewer_id: brewerId,
+          refresh,
+        }),
+      });
+      setRoasterRecipe(data);
+      setRoasterStatus('done');
+    } catch (err) {
+      setRoasterError(err.message || 'Search failed');
+      setRoasterStatus('error');
+    }
+  };
+
+  useEffect(() => { lookupRoasterRecipe(false); }, [brewerId]);
 
   const steps = rec?.recipe?.steps || [];
   const timer = useTimer(steps);
@@ -114,10 +158,37 @@ export function RecipeView({
     }
   };
 
+  // How much to trust a card. Searched recipes carry the model's confidence
+  // and the page it came from; bundled community recipes are curated and
+  // always link their source.
+  const renderProvenance = (cr) => {
+    const conf = cr.confidence;
+    const recall = cr.source_kind === 'model_recall';
+    return (
+      <div class={styles.badgeRow}>
+        {conf && (
+          <span class={`${styles.badge} ${CONFIDENCE_STYLE[conf] || styles.badgeNeutral}`} title={cr.confidence_reason || ''}>
+            {CONFIDENCE_LABEL[conf] || conf}
+          </span>
+        )}
+        {!conf && <span class={`${styles.badge} ${styles.badgeNeutral}`}>Community</span>}
+        {recall && <span class={`${styles.badge} ${styles.badgeLow}`}>From memory, not searched</span>}
+        {cr.source_url && (
+          <a class={styles.sourceLink} href={cr.source_url} target="_blank" rel="noopener">
+            Source{cr.source_url_unverified ? ' (unopened)' : ''} &#8599;
+          </a>
+        )}
+        {cr.cached_at && <span class={styles.badgeMuted}>looked up {formatLookupDate(cr.cached_at)}</span>}
+      </div>
+    );
+  };
+
   const renderRecipeCard = (cr) => (
     <div class={styles.recipeCard} key={cr.id}>
       <div class={styles.recipeCardTitle}>{cr.title}</div>
       <div class={styles.recipeCardAuthor}>{cr.author}</div>
+      {renderProvenance(cr)}
+      {cr.confidence_reason && <p class={styles.confidenceReason}>{cr.confidence_reason}</p>}
       <div class={styles.recipeCardParams}>
         {cr.ratio && <span>{cr.ratio}</span>}
         {(cr.temp_c || cr.temp_f) && <span>{fmtTemp(cr.temp_c, cr.temp_f, tempUnit)}</span>}
@@ -189,14 +260,51 @@ export function RecipeView({
             {adjustment?.lever
               ? <>One change from v{version - 1}: <strong>{LEVER_LABELS[adjustment.lever] || adjustment.lever}</strong>. {adjustment.reason}</>
               : <>Same recipe as v{version - 1}. {adjustment?.reason || ''}</>}
+            {adjustment?.grind_used && (
+              <> You ground v{version - 1} at <strong>{adjustment.grind_used.setting}</strong> instead
+              of {adjustment.grind_used.recommended_display || adjustment.grind_used.recommended}, so
+              this recipe starts from there.</>
+            )}
           </span>
         </div>
       )}
 
       <FreshnessLine bag={bag} onSetRoastDate={onSetRoastDate} />
 
+      <div class={styles.communitySection}>
+        <p class={styles.sectionLabel}>FROM THE ROASTER</p>
+        {roasterStatus === 'no_roaster' && (
+          <p class={styles.provenance}>
+            No roaster on this coffee. Add one to the bag and Coffee Dial will look up their published recipe first.
+          </p>
+        )}
+        {roasterStatus === 'loading' && (
+          <p class={styles.provenance}>Searching {coffeeData.roaster}&rsquo;s brew guides for {coffeeData.coffee_name}...</p>
+        )}
+        {roasterStatus === 'error' && (
+          <p class={styles.provenance} style={{ color: 'var(--color-red)' }}>
+            Could not search {coffeeData.roaster}: {roasterError}
+          </p>
+        )}
+        {roasterStatus === 'done' && roasterRecipe && renderRecipeCard(roasterRecipe)}
+        {roasterStatus !== 'no_roaster' && roasterStatus !== 'loading' && (
+          <button class={styles.refreshBtn} onClick={() => lookupRoasterRecipe(true)}>Search again</button>
+        )}
+      </div>
+
+      {communityRecipes.length > 0 && (
+        <div class={styles.communitySection}>
+          <p class={styles.sectionLabel}>COMMUNITY RECIPES</p>
+          {communityRecipes.map(renderRecipeCard)}
+        </div>
+      )}
+
       <hr class={styles.divider} />
 
+      <p class={styles.sectionLabel}>COFFEE DIAL&rsquo;S ESTIMATE</p>
+      <p class={styles.provenance}>
+        Computed from roast, origin and process tables plus your dial-in history. Not a published recipe.
+      </p>
       <RecipeCard rec={rec} tempUnit={tempUnit} />
 
       {isAiden && (
@@ -227,15 +335,8 @@ export function RecipeView({
         </>
       )}
 
-      {communityRecipes.length > 0 && (
-        <div class={styles.communitySection}>
-          <p class={styles.sectionLabel}>COMMUNITY RECIPES</p>
-          {communityRecipes.map(renderRecipeCard)}
-        </div>
-      )}
-
       <div class={styles.communitySection}>
-        <p class={styles.sectionLabel}>ROASTER RECIPE SEARCH</p>
+        <p class={styles.sectionLabel}>SEARCH ANOTHER ROASTER</p>
         <div class={styles.searchRow}>
           <input
             class={styles.searchInput}

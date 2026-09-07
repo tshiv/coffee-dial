@@ -172,3 +172,76 @@
   line-height: 1.5;
   color: var(--color-text-secondary);
 }
+
+.badgeRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.badgeHigh {
+  color: var(--color-green);
+  background: color-mix(in srgb, var(--color-green) 15%, transparent);
+}
+
+.badgeMedium {
+  color: var(--color-yellow);
+  background: color-mix(in srgb, var(--color-yellow) 18%, transparent);
+}
+
+.badgeLow {
+  color: var(--color-red);
+  background: color-mix(in srgb, var(--color-red) 12%, transparent);
+}
+
+.badgeNeutral {
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+  border-color: var(--color-border);
+}
+
+.badgeMuted {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.sourceLink {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.confidenceReason {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+  margin-top: 6px;
+}
+
+.provenance {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.refreshBtn {
+  margin-top: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: var(--color-accent);
+  cursor: pointer;
+}

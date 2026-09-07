@@ -37,6 +37,7 @@ from flask_cors import CORS
 from ai.parsing import call_ai
 from ai.recipe_search import search_roaster_recipe
 from engine.recommend import build_recommendation, lever_headroom
+from engine.grind import setting_to_microns
 from engine import freshness
 from engine import dialin
 from equipment.loader import get_grinder, get_brewer, list_equipment
@@ -119,6 +120,13 @@ def init_db():
                 created_at  INTEGER NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS roaster_recipe_cache (
+                lookup_key  TEXT PRIMARY KEY,
+                fetched_at  INTEGER NOT NULL,
+                recipe_json TEXT NOT NULL
+            );
+        """)
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS user_equipment (
                 id             INTEGER PRIMARY KEY AUTOINCREMENT,
                 equipment_type TEXT NOT NULL,
@@ -167,6 +175,9 @@ def _migrate_brews(conn):
         "chain_micron_delta": "REAL",
         "chain_temp_delta_c": "REAL",
         "chain_ratio_delta": "REAL",
+        # The grinder setting the brewer actually used, when it differs from
+        # the recommendation in `grind`. Nullable: absent means "followed it".
+        "grind_used": "REAL",
     }
     for col, col_type in new_columns.items():
         if col not in cols:
@@ -379,7 +390,8 @@ BREW_FIELDS = ["timestamp", "bag_text", "coffee_name", "roast", "origin", "proce
                "recipe_json", "preset_name", "rating", "notes", "rationale",
                "bag_id", "bag_phase", "bag_age_days", "bag_open_age_days", "bag_storage",
                "parent_brew_id", "version",
-               "chain_micron_delta", "chain_temp_delta_c", "chain_ratio_delta"]
+               "chain_micron_delta", "chain_temp_delta_c", "chain_ratio_delta",
+               "grind_used"]
 
 CHAIN_COLUMNS = {
     "chain_micron_delta": "micron_delta",
@@ -432,7 +444,7 @@ def post_history():
 @app.route("/api/history/<int:brew_id>", methods=["PUT"])
 def put_history(brew_id):
     data = request.json or {}
-    allowed = ["rating", "notes", "grind", "temp_c"]
+    allowed = ["rating", "notes", "grind", "temp_c", "grind_used"]
     updates = {k: v for k, v in data.items() if k in allowed}
     if not updates:
         return jsonify({"error": "No valid fields to update"}), 400
@@ -620,7 +632,7 @@ def rate_brew(brew_id):
         conn.commit()
         brew = conn.execute("SELECT * FROM brews WHERE id = ?", (brew_id,)).fetchone()
 
-    next_chain, next_version, adjustment = dialin.chain_for_child(brew, _headroom_for_brew(brew))
+    next_chain, next_version, adjustment = _child_of(brew)
 
     response = {
         "brew_id": brew_id,
@@ -652,14 +664,65 @@ def _coffee_from_brew(brew):
     }
 
 
+def _grind_used_offset(brew):
+    """How far the brew was actually ground from its recommendation, in microns.
+
+    Returns (offset, detail). Offset is actual minus recommended, 0.0 when the
+    grind used was not recorded, matches the recommendation, or cannot be
+    placed in micron space (unknown grinder, no target). `detail` describes
+    the discrepancy for the UI, or is None when there is none.
+    """
+    grind_used = brew["grind_used"]
+    if grind_used is None:
+        return 0.0, None
+    # Using exactly the setting that was recommended is not a discrepancy,
+    # even though a stepped grinder's nearest notch sits a few microns off
+    # the raw target.
+    if brew["grind"] is not None and abs(float(grind_used) - float(brew["grind"])) < 1e-9:
+        return 0.0, None
+    grinder = get_grinder(brew["grinder_id"] or "")
+    target = brew["target_microns"]
+    if grinder is None or target is None:
+        return 0.0, None
+    actual = setting_to_microns(grinder, grind_used)
+    if actual is None:
+        return 0.0, None
+    offset = actual - float(target)
+    if abs(offset) < 1e-9:
+        return 0.0, None
+    return offset, {
+        "setting": grind_used,
+        "recommended": brew["grind"],
+        "recommended_display": brew["grinder_setting_display"],
+        "microns": round(actual),
+        "offset_microns": round(offset),
+    }
+
+
 def _headroom_for_brew(brew):
-    """Which dial-in moves the brew's own brewer still has room for."""
+    """Which dial-in moves the brew's own brewer still has room for.
+
+    Measured from where the brew actually was: a grind used that differs
+    from the recommendation moves the starting point.
+    """
     brewer = get_brewer(brew["brewer_id"] or "")
     if brewer is None:
         return None
-    return lever_headroom(
-        _coffee_from_brew(brew), brewer, brew["brew_oz"] or 12, dialin.chain_from_row(brew)
+    chain = dialin.chain_from_row(brew)
+    offset, _ = _grind_used_offset(brew)
+    chain["micron_delta"] += offset
+    return lever_headroom(_coffee_from_brew(brew), brewer, brew["brew_oz"] or 12, chain)
+
+
+def _child_of(parent):
+    """Chain, version and adjustment for the brew that follows `parent`."""
+    offset, detail = _grind_used_offset(parent)
+    chain, version, adjustment = dialin.chain_for_child(
+        parent, _headroom_for_brew(parent), grind_offset_microns=offset
     )
+    if detail is not None:
+        adjustment["grind_used"] = detail
+    return chain, version, adjustment
 
 
 def _chain_for_child(conn, parent_brew_id):
@@ -671,7 +734,7 @@ def _chain_for_child(conn, parent_brew_id):
     parent = conn.execute("SELECT * FROM brews WHERE id = ?", (parent_brew_id,)).fetchone()
     if parent is None:
         raise LookupError(f"Parent brew {parent_brew_id} not found")
-    chain, version, adjustment = dialin.chain_for_child(parent, _headroom_for_brew(parent))
+    chain, version, adjustment = _child_of(parent)
     return chain, version, adjustment, parent
 
 
@@ -891,22 +954,50 @@ def get_community_recipes_api():
     return jsonify(recipes)
 
 
+# A roaster's published recipe does not change day to day; look it up once
+# per coffee and brewer, and keep it for a month.
+ROASTER_RECIPE_TTL_S = 30 * 24 * 3600
+
+
 @app.route("/api/search-roaster-recipe", methods=["POST"])
 def search_roaster_recipe_api():
     data = request.json or {}
     roaster = (data.get("roaster") or "").strip()
     coffee_name = (data.get("coffee_name") or "").strip()
-    brew_method = (data.get("brew_method") or "").strip()
-    brewer_name = (data.get("brewer_name") or "").strip()
+    brewer_id = (data.get("brewer_id") or "").strip()
+    refresh = bool(data.get("refresh"))
 
     if not roaster:
         return jsonify({"error": "roaster name required"}), 400
+
+    # The brewer's own name and method go into the search; the caller only
+    # has to send the id it already knows.
+    brewer = get_brewer(brewer_id) if brewer_id else None
+    brew_method = (data.get("brew_method") or (brewer or {}).get("method") or "").strip()
+    brewer_name = (data.get("brewer_name") or (brewer or {}).get("name") or "").strip()
+
+    key = "|".join(x.lower() for x in (roaster, coffee_name, brewer_id or brew_method))
+    now = int(time.time())
+    with get_db() as conn:
+        if not refresh:
+            row = conn.execute(
+                "SELECT fetched_at, recipe_json FROM roaster_recipe_cache WHERE lookup_key = ?",
+                (key,)).fetchone()
+            if row and now - row["fetched_at"] < ROASTER_RECIPE_TTL_S:
+                cached = json.loads(row["recipe_json"])
+                cached["cached_at"] = row["fetched_at"]
+                return jsonify(cached)
 
     settings = load_settings()
     result, err = search_roaster_recipe(roaster, coffee_name, brew_method, brewer_name, settings)
     if err:
         return jsonify({"error": err}), 500
 
+    with get_db() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO roaster_recipe_cache (lookup_key, fetched_at, recipe_json) "
+            "VALUES (?, ?, ?)", (key, now, json.dumps(result)))
+        conn.commit()
     return jsonify(result)
 
 

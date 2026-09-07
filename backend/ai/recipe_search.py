@@ -5,7 +5,49 @@ Uses AI to find brew recommendations from specific roasters,
 returning structured recipe data in the community recipe format.
 """
 
-from .parsing import call_ai_with_prompt
+from .parsing import call_ai_with_prompt, call_anthropic_with_web_search
+
+# How a recipe was obtained. Shown to the brewer next to the confidence, so
+# "high" from a real page and "high" from memory never look the same.
+SOURCE_WEB = "roaster_web"       # searched the web, ideally the roaster's own guide
+SOURCE_RECALL = "model_recall"   # the model's memory only, no search
+
+WEB_SEARCH_PROMPT = """You are a specialty coffee expert helping a home brewer find the brew recipe a roaster actually publishes for their coffee.
+
+You have web search and web fetch. Use them. Priority order:
+1. The roaster's own brew guide for this exact coffee (product page, brew guide, blog post, recipe card).
+2. The roaster's general brew guide for this brew method or brewer.
+3. A reputable third-party recipe for this specific coffee or roaster (a well-known coffee YouTuber, a community profile site such as brew.link or brewshare.coffee).
+Only if none of those exist, fall back to a sensible recipe for this coffee's style and say so.
+
+Return ONE JSON object and nothing else after it, matching this schema:
+{
+  "id": "auto_<roaster>_<coffee>",
+  "title": "Recipe name as the roaster calls it",
+  "author": "<roaster or author name>",
+  "source_url": "URL of the page the recipe came from, or null",
+  "attribution": "Credit: <roaster or author>",
+  "brew_method": "<pour_over|immersion|aeropress|drip>",
+  "coffee_amount_g": <number>,
+  "water_amount_g": <number>,
+  "ratio": <number>,
+  "water_temp_c": <number>,
+  "grind_size": "<description>",
+  "total_time_s": <number>,
+  "steps": [
+    {"order": 1, "action": "<bloom|pour|wait|stir|steep|press|drawdown|swirl|add_water|setup|release>", "water_g": <number or omit>, "duration_s": <number>, "description": "<instruction>"}
+  ],
+  "notes": "What makes this recipe distinctive, and which page it came from",
+  "confidence": "<high|medium|low>",
+  "confidence_reason": "One sentence on what you found and did not find"
+}
+
+Confidence rules, strictly:
+- "high": you fetched a page from the roaster (or the named author) that gives this recipe's numbers for this coffee or this brew method. source_url must be that page.
+- "medium": you found the roaster's general guidance or a third-party recipe for this coffee, and adapted it. source_url is the page you adapted from.
+- "low": you found nothing specific and are proposing a recipe from the coffee's style. source_url must be null.
+- Never report a source_url you did not actually open.
+- Temperatures in Celsius. Numbers, not strings, for numeric fields."""
 
 RECIPE_SEARCH_PROMPT = """You are a specialty coffee expert with deep knowledge of roaster brew guides, published recipes, and community brewing techniques.
 
@@ -67,15 +109,31 @@ def search_roaster_recipe(roaster, coffee_name, brew_method, brewer_name, settin
     user_prompt = "\n".join(parts)
     user_prompt += "\n\nFind this roaster's recommended brew recipe for this method. If they publish a specific brew guide, use those exact parameters."
 
-    result, err = call_ai_with_prompt(user_prompt, RECIPE_SEARCH_PROMPT, settings)
+    # A real search beats recall whenever an Anthropic key is available; the
+    # OpenAI path here is chat-completions only and cannot browse.
+    if settings.get("anthropic_key"):
+        result, sources, err = call_anthropic_with_web_search(
+            user_prompt, settings["anthropic_key"], WEB_SEARCH_PROMPT)
+        source_kind = SOURCE_WEB
+    else:
+        result, err = call_ai_with_prompt(user_prompt, RECIPE_SEARCH_PROMPT, settings)
+        sources = []
+        source_kind = SOURCE_RECALL
     if err:
         return None, err
+    if not isinstance(result, dict):
+        return None, "Recipe search returned something that was not a recipe."
 
-    # Ensure required fields exist
-    if result and isinstance(result, dict):
-        result.setdefault("confidence", "low")
-        result.setdefault("attribution", f"Credit: {roaster}")
-        result.setdefault("author", roaster)
-        result.setdefault("brew_method", brew_method)
-
+    result.setdefault("confidence", "low")
+    result.setdefault("confidence_reason", "")
+    result.setdefault("attribution", f"Credit: {roaster}")
+    result.setdefault("author", roaster)
+    result.setdefault("brew_method", brew_method)
+    result["source_kind"] = source_kind
+    result["sources"] = sources
+    # A source_url the model never opened is a claim, not a source.
+    if source_kind == SOURCE_WEB and result.get("source_url"):
+        opened = {s["url"] for s in sources}
+        if result["source_url"] not in opened:
+            result["source_url_unverified"] = True
     return result, None

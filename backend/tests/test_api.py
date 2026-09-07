@@ -191,3 +191,109 @@ def test_no_route_deletes_aiden_profiles(client):
     for rule, methods in rules.items():
         if "aiden" in rule:
             assert "DELETE" not in methods, rule
+
+
+# ─── Grind actually used ──────────────────────────────────────────────────────
+
+ODE1 = {"grinder_id": "fellow_ode_gen1", "brewer_id": "fellow_aiden", "brew_oz": 12}
+MEDIUM_HONEY = {"coffee_name": "Gasharu", "roast": "medium", "origin": "Rwanda", "process": "honey"}
+
+
+def test_child_recommendation_starts_from_the_grind_used(client):
+    """Told Setting 6, ground at 4.1, rated flat. v2 keeps the grind you used
+    and the flat rating still only strengthens the ratio."""
+    base = recommend(client, coffee_data=MEDIUM_HONEY, grinder_id=ODE1["grinder_id"])
+    assert base["grinder_setting"] == 6 and base["target_microns"] == 730
+
+    v1 = log_brew(client, **MEDIUM_HONEY, **ODE1, grind=base["grinder_setting"],
+                  grinder_setting_display=base["grinder_display"],
+                  target_microns=base["target_microns"], grind_used=4.1)
+    assert v1["grind_used"] == 4.1
+    r = client.post(f"/api/brews/{v1['id']}/rate", json={"rating": "flat"}).get_json()
+    assert r["adjustment"]["lever"] == "ratio"
+    assert r["adjustment"]["grind_used"] == {
+        "setting": 4.1, "recommended": 6, "recommended_display": "Setting 6",
+        "microns": 560, "offset_microns": -170,
+    }
+    assert r["next_chain"]["micron_delta"] == -170.0
+    assert r["next_recommendation"]["grinder_setting"] == 4
+
+    v2 = recommend(client, coffee_data=MEDIUM_HONEY, grinder_id=ODE1["grinder_id"],
+                   parent_brew_id=v1["id"])
+    assert v2["version"] == 2
+    assert v2["grinder_setting"] == 4
+    assert v2["target_microns"] == 560
+    assert v2["ratio"] == base["ratio"] - 0.5
+    assert v2["adjustment"]["grind_used"]["setting"] == 4.1
+
+    logged = log_brew(client, **MEDIUM_HONEY, **ODE1, parent_brew_id=v1["id"])
+    assert logged["chain_micron_delta"] == -170.0
+    assert logged["chain_ratio_delta"] == -0.5
+
+
+def test_grind_used_matching_the_recommendation_changes_nothing(client):
+    base = recommend(client, coffee_data=MEDIUM_HONEY, grinder_id=ODE1["grinder_id"])
+    v1 = log_brew(client, **MEDIUM_HONEY, **ODE1, grind=6, target_microns=730, grind_used=6)
+    client.post(f"/api/brews/{v1['id']}/rate", json={"rating": "flat"})
+    v2 = recommend(client, coffee_data=MEDIUM_HONEY, grinder_id=ODE1["grinder_id"],
+                   parent_brew_id=v1["id"])
+    assert v2["target_microns"] == base["target_microns"]
+    assert "grind_used" not in v2["adjustment"]
+
+
+def test_grind_used_can_be_added_after_the_fact(client):
+    v1 = log_brew(client, **MEDIUM_HONEY, **ODE1, grind=6, target_microns=730)
+    assert v1["grind_used"] is None
+    r = client.put(f"/api/history/{v1['id']}", json={"grind_used": 5})
+    assert r.status_code == 200 and r.get_json()["grind_used"] == 5
+    v2 = recommend(client, coffee_data=MEDIUM_HONEY, grinder_id=ODE1["grinder_id"],
+                   parent_brew_id=v1["id"])
+    assert v2["target_microns"] == 650
+
+
+def test_grind_used_is_stored_and_listed(client):
+    log_brew(client, **MEDIUM_HONEY, **ODE1, grind=6, grind_used=4.1)
+    assert client.get("/api/history").get_json()[0]["grind_used"] == 4.1
+
+
+# ─── Roaster recipe lookup route ──────────────────────────────────────────────
+
+def test_roaster_lookup_resolves_brewer_and_caches(client, monkeypatch):
+    calls = []
+
+    def fake_search(roaster, coffee_name, brew_method, brewer_name, settings):
+        calls.append((roaster, coffee_name, brew_method, brewer_name))
+        return {"title": "Guide", "confidence": "medium", "source_kind": "roaster_web"}, None
+    monkeypatch.setattr(coffee_app, "search_roaster_recipe", fake_search)
+    with coffee_app.get_db() as conn:
+        conn.execute("DELETE FROM roaster_recipe_cache")
+        conn.commit()
+
+    body = {"roaster": "Red Rooster", "coffee_name": "Agaseke", "brewer_id": "fellow_aiden"}
+    first = client.post("/api/search-roaster-recipe", json=body)
+    assert first.status_code == 200, first.get_json()
+    assert first.get_json()["confidence"] == "medium"
+    assert "cached_at" not in first.get_json()
+    # The brewer id was turned into the name and method the search needs.
+    assert calls == [("Red Rooster", "Agaseke", "drip", "Fellow Aiden")]
+
+    second = client.post("/api/search-roaster-recipe", json=body).get_json()
+    assert second["title"] == "Guide" and second["cached_at"] > 0
+    assert len(calls) == 1, "second lookup should come from the cache"
+
+    client.post("/api/search-roaster-recipe", json={**body, "refresh": True})
+    assert len(calls) == 2, "refresh bypasses the cache"
+
+
+def test_roaster_lookup_error_is_not_cached(client, monkeypatch):
+    monkeypatch.setattr(coffee_app, "search_roaster_recipe",
+                        lambda *a: (None, "No AI API key configured. Add one in Settings."))
+    r = client.post("/api/search-roaster-recipe", json={"roaster": "X", "brewer_id": "fellow_aiden"})
+    assert r.status_code == 500
+    assert "No AI API key" in r.get_json()["error"]
+    with coffee_app.get_db() as conn:
+        assert conn.execute("SELECT COUNT(*) FROM roaster_recipe_cache WHERE lookup_key LIKE 'x|%'").fetchone()[0] == 0
+
+
+def test_roaster_lookup_requires_a_roaster(client):
+    assert client.post("/api/search-roaster-recipe", json={"coffee_name": "C"}).status_code == 400
