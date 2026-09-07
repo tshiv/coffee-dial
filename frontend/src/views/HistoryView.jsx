@@ -56,6 +56,7 @@ export function HistoryView({ apiFetch, onDone }) {
             {e.roast && `${e.roast} roast`}
             {e.origin && ` · ${e.origin}`}
             {e.grinder_setting_display && ` · Grind ${e.grinder_setting_display}`}
+            {e.grind_used != null && ` (used ${e.grind_used})`}
             {e.brew_oz && ` · ${e.brew_oz} oz`}
             {e.dose_g && ` · ${e.dose_g}g`}
           </div>

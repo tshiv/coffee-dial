@@ -20,14 +20,22 @@ export function RatingRow({ brewData, apiFetch, tempUnit, onBrewAgain }) {
   const [saveStatus, setSaveStatus] = useState('idle');
   const [result, setResult] = useState(null);
   const [savedBrew, setSavedBrew] = useState(null);
+  // What the grinder was actually set to. Blank means the recommendation
+  // was followed; the server treats null the same way.
+  const [grindUsed, setGrindUsed] = useState('');
 
   const handleSave = async () => {
     if (!selected) return;
     setSaveStatus('saving');
     try {
+      const parsed = parseFloat(grindUsed);
       const brew = await apiFetch('/history', {
         method: 'POST',
-        body: JSON.stringify({ ...brewData, rating: selected.value }),
+        body: JSON.stringify({
+          ...brewData,
+          rating: selected.value,
+          grind_used: Number.isFinite(parsed) ? parsed : null,
+        }),
       });
       // Saving and dialing in are separate steps on purpose: history is
       // recorded even if the dial-in call fails.
@@ -64,6 +72,25 @@ export function RatingRow({ brewData, apiFetch, tempUnit, onBrewAgain }) {
           </button>
         ))}
       </div>
+
+      <label class={styles.grindRow}>
+        <span class={styles.grindLabel}>Grind you actually used</span>
+        <input
+          class={styles.grindInput}
+          type="number"
+          inputMode="decimal"
+          step="0.1"
+          min="0"
+          value={grindUsed}
+          placeholder={brewData.grind != null ? String(brewData.grind) : ''}
+          disabled={saveStatus === 'saved'}
+          onInput={e => setGrindUsed(e.target.value)}
+        />
+      </label>
+      <p class={styles.grindHint}>
+        Leave blank if you followed {brewData.grinder_setting_display || 'the recommendation'}.
+        The next version starts from what you really ground.
+      </p>
 
       {selected && saveStatus !== 'saved' && (
         <button

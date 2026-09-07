@@ -227,11 +227,18 @@ def chain_from_row(row):
     return chain
 
 
-def chain_for_child(parent_row, headroom=None):
+def chain_for_child(parent_row, headroom=None, grind_offset_microns=0.0):
     """The chain, version and adjustment for the brew that follows `parent_row`.
 
     A brew row stores the deltas that were applied to *that* brew. The next
     brew inherits them plus the one move its parent's rating calls for.
+
+    `grind_offset_microns` is how far the parent was *actually* ground from
+    what it recommended (actual minus recommended, in microns). A brewer who
+    ignored "Setting 6" and ground at 4 has already moved the grind lever;
+    the child starts from where the parent really was, not from where the
+    recipe said it should have been. Zero when the grind used was not
+    recorded.
     """
     get = parent_row.get if hasattr(parent_row, "get") else lambda k: parent_row[k]
     bag_phase = None
@@ -240,6 +247,9 @@ def chain_for_child(parent_row, headroom=None):
     except (KeyError, IndexError):
         pass
     adjustment = next_adjustment(get("rating"), headroom, bag_phase)
-    chain = apply_adjustment(chain_from_row(parent_row), adjustment)
+    chain = chain_from_row(parent_row)
+    if grind_offset_microns:
+        chain["micron_delta"] += float(grind_offset_microns)
+    chain = apply_adjustment(chain, adjustment)
     version = (get("version") or 1) + 1
     return chain, version, adjustment

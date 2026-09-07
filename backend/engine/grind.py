@@ -167,6 +167,39 @@ def microns_to_setting(grinder, target_microns):
     return (grinder["settings"]["min"] + grinder["settings"]["max"]) // 2
 
 
+def setting_to_microns(grinder, setting):
+    """Inverse of microns_to_setting: the microns a dial position stands for.
+
+    Accepts fractional settings (a stepless grinder, or "4.1" on a stepped
+    one) and interpolates between map points, so what the brewer actually
+    ground at can be compared with the target in micron space. Positions
+    outside the map clamp to its ends. Returns None when the grinder has no
+    micron data.
+    """
+    if setting is None:
+        return None
+    setting = float(setting)
+
+    if "micron_formula" in grinder:
+        formula = grinder["micron_formula"]
+        return formula["base_microns"] + setting * formula["microns_per_step"]
+
+    mmap = grinder.get("micron_map")
+    if not mmap:
+        return None
+    if setting <= mmap[0][0]:
+        return float(mmap[0][1])
+    if setting >= mmap[-1][0]:
+        return float(mmap[-1][1])
+    for i in range(len(mmap) - 1):
+        s1, m1 = mmap[i]
+        s2, m2 = mmap[i + 1]
+        if s1 <= setting <= s2:
+            frac = (setting - s1) / (s2 - s1)
+            return m1 + frac * (m2 - m1)
+    return None
+
+
 def format_grind_setting(grinder, setting):
     """Format a grind setting for display (e.g., 'Setting 4' or '26 clicks')."""
     unit = grinder["settings"]["unit"]
