@@ -102,3 +102,43 @@ def test_third_bright_in_a_row_moves_grind_once_temp_is_pinned():
     assert levers.index("grind") > levers.index("temp")
     rec = _rec(chain=chain)
     assert rec["recipe"]["temp_c"] <= AIDEN["parameters"]["temp_c"]["max"]
+
+
+# ─── Default roast ────────────────────────────────────────────────────────────
+
+def test_missing_roast_takes_the_default_and_says_so():
+    unknown = build_recommendation({"origin": "Ethiopia", "process": "washed"},
+                                   GRINDER, AIDEN, 12, [], default_roast="medium-light")
+    explicit = _rec(coffee={**COFFEE, "roast": "medium-light"})
+    assert unknown["target_microns"] == explicit["target_microns"]
+    assert unknown["ratio"] == explicit["ratio"]
+    assert unknown["recipe"] == explicit["recipe"]
+    assert any("assuming medium-light" in n for n in unknown["bias_notes"])
+    assert not any("assuming" in n for n in explicit["bias_notes"])
+
+
+def test_unrecognized_roast_string_takes_the_default():
+    rec = build_recommendation({**COFFEE, "roast": "City+"}, GRINDER, AIDEN, 12, [],
+                               default_roast="light")
+    assert rec["target_microns"] == _rec()["target_microns"]
+    assert any("assuming light" in n for n in rec["bias_notes"])
+
+
+def test_bag_roast_beats_the_default():
+    rec = build_recommendation({**COFFEE, "roast": "dark"}, GRINDER, AIDEN, 12, [],
+                               default_roast="light")
+    assert rec["target_microns"] == _rec(coffee={**COFFEE, "roast": "dark"})["target_microns"]
+
+
+def test_no_default_still_means_medium():
+    rec = build_recommendation({"origin": "Ethiopia", "process": "washed"}, GRINDER, AIDEN, 12, [])
+    assert rec["target_microns"] == _rec(coffee={**COFFEE, "roast": "medium"})["target_microns"]
+    assert any("assuming medium" in n for n in rec["bias_notes"])
+
+
+def test_headroom_honours_the_default_roast():
+    """Ratio headroom depends on roast, so the default must reach it too."""
+    light = lever_headroom({"origin": "Ethiopia"}, AIDEN, 12, default_roast="light")
+    medium = lever_headroom({"origin": "Ethiopia"}, AIDEN, 12)
+    assert light == lever_headroom({**COFFEE, "roast": "light"}, AIDEN, 12)
+    assert medium == lever_headroom({**COFFEE, "roast": "medium"}, AIDEN, 12)

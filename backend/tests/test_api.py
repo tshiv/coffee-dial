@@ -297,3 +297,39 @@ def test_roaster_lookup_error_is_not_cached(client, monkeypatch):
 
 def test_roaster_lookup_requires_a_roaster(client):
     assert client.post("/api/search-roaster-recipe", json={"coffee_name": "C"}).status_code == 400
+
+
+# ─── Default roast setting ────────────────────────────────────────────────────
+
+@pytest.fixture
+def settings_file(tmp_path, monkeypatch):
+    path = tmp_path / "settings.json"
+    monkeypatch.setattr(coffee_app, "SETTINGS_PATH", str(path))
+    return path
+
+
+def test_default_roast_is_medium_until_set(client, settings_file):
+    assert client.get("/api/settings").get_json()["default_roast"] == "medium"
+
+
+def test_default_roast_is_validated(client, settings_file):
+    r = client.post("/api/settings", json={"default_roast": "espresso"})
+    assert r.status_code == 400 and "default_roast" in r.get_json()["error"]
+    assert not settings_file.exists(), "a rejected setting must not be written"
+
+    assert client.post("/api/settings", json={"default_roast": "Medium-Light"}).status_code == 200
+    assert client.get("/api/settings").get_json()["default_roast"] == "medium-light"
+
+
+def test_default_roast_reaches_the_recommendation_and_the_bag(client, settings_file):
+    client.post("/api/settings", json={"default_roast": "light"})
+
+    rec = recommend(client, coffee_data={"coffee_name": "Mystery", "origin": "Ethiopia"})
+    assert rec["target_microns"] == recommend(client)["target_microns"]  # COFFEE is light
+    assert any("assuming light" in n for n in rec["bias_notes"])
+
+    r = client.post("/api/bags", json={"coffee_name": "Mystery", "roast_date": int(time.time()) - DAY})
+    read = r.get_json()["freshness"]
+    assert read["assumed_roast"] is True
+    assert "assuming light" in read["message"]
+    assert read["ready_range_days"] == list(freshness.READY_RANGE_DAYS["light"])

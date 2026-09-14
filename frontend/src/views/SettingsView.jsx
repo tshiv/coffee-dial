@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'preact/hooks';
 import styles from './SettingsView.module.css';
 
+const ROAST_LEVELS = [
+  { value: 'light', label: 'Light' },
+  { value: 'medium-light', label: 'Medium-Light' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'medium-dark', label: 'Medium-Dark' },
+  { value: 'dark', label: 'Dark' },
+];
+
 export function SettingsView({ api, equipment, theme, setTheme, onDone, onViewHistory, onViewAidenProfiles }) {
   const [settings, setSettings] = useState({});
   const [presets, setPresets] = useState([]);
@@ -140,6 +148,26 @@ export function SettingsView({ api, equipment, theme, setTheme, onDone, onViewHi
             value={settings[(settings.ai_provider || 'anthropic') + '_key'] || ''}
             onChange={(e) => saveSetting((settings.ai_provider || 'anthropic') + '_key', e.target.value)}
           />
+        </div>
+      </div>
+
+      {/* Default Roast */}
+      <div class={styles.card}>
+        <div class={styles.cardTitle}>Default Roast</div>
+        <div class={styles.row}>
+          <span class={styles.rowLabel}>When a bag's roast is unknown</span>
+          <select
+            class={styles.select}
+            value={settings.default_roast || 'medium'}
+            onChange={(e) => saveSetting('default_roast', e.target.value)}
+          >
+            {ROAST_LEVELS.map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </select>
+        </div>
+        <div class={styles.hint}>
+          Match this to your subscription profile. Grind, ratio, and rest time fall back to it instead of medium.
         </div>
       </div>
 

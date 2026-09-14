@@ -122,12 +122,18 @@ All settings are stored in `backend/settings.json` (gitignored):
   "ai_provider": "anthropic",
   "anthropic_key": "sk-ant-...",
   "temp_unit": "F",
+  "default_roast": "medium-light",
   "fellow_email": "you@email.com",
   "fellow_password": "..."
 }
 ```
 
 Temperature displays in Fahrenheit by default (changeable in Settings).
+
+`default_roast` is the roast the engine assumes when a bag's own roast can't be read
+(`light`, `medium-light`, `medium`, `medium-dark`, `dark`; defaults to `medium`). Set it
+to match your subscription profile so an unparsed bag gets the right grind, ratio, and
+rest window instead of a medium-roast guess.
 
 ---
 

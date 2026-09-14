@@ -37,8 +37,36 @@ ROAST_RATIO_ADJUSTMENTS = {
     "dark": -0.5,
 }
 
+# The roast vocabulary every table in the engine is keyed on.
+ROAST_LEVELS = tuple(ROAST_RATIO_ADJUSTMENTS)
+DEFAULT_ROAST = "medium"
 
-def build_recommendation(coffee_data, grinder, brewer, oz, history_rows, chain=None):
+
+def normalize_roast(roast):
+    """Map a roast string onto the engine's vocabulary, or None."""
+    if not roast:
+        return None
+    r = str(roast).strip().lower()
+    return r if r in ROAST_LEVELS else None
+
+
+def resolve_roast(coffee_data, default_roast=None):
+    """Fill in the roast the engine will actually use.
+
+    A bag whose roast is missing or unrecognized gets the user's default
+    (their subscription profile), else the engine's own. Returns
+    (coffee_data, assumed): a copy with `roast` set, and whether it was
+    assumed rather than read from the bag.
+    """
+    known = normalize_roast(coffee_data.get("roast"))
+    if known:
+        return {**coffee_data, "roast": known}, False
+    fallback = normalize_roast(default_roast) or DEFAULT_ROAST
+    return {**coffee_data, "roast": fallback}, True
+
+
+def build_recommendation(coffee_data, grinder, brewer, oz, history_rows, chain=None,
+                         default_roast=None):
     """Build a complete brew recommendation.
 
     Args:
@@ -51,11 +79,13 @@ def build_recommendation(coffee_data, grinder, brewer, oz, history_rows, chain=N
             When present it takes precedence over the aggregate roast-level
             learning, which stays as the prior for a coffee you have not
             brewed yet.
+        default_roast: the roast to assume when coffee_data has none.
 
     Returns:
         dict with grinder_setting, grinder_display, target_microns, recipe, bias_notes
     """
-    targets = compute_targets(coffee_data, brewer, oz, history_rows, chain)
+    targets = compute_targets(coffee_data, brewer, oz, history_rows, chain, default_roast)
+    coffee_data, _ = resolve_roast(coffee_data, default_roast)
 
     grinder_setting = microns_to_setting(grinder, targets["target_microns"])
     grinder_display = format_grind_setting(grinder, grinder_setting)
@@ -79,7 +109,7 @@ def build_recommendation(coffee_data, grinder, brewer, oz, history_rows, chain=N
     }
 
 
-def compute_targets(coffee_data, brewer, oz, history_rows, chain=None):
+def compute_targets(coffee_data, brewer, oz, history_rows, chain=None, default_roast=None):
     """The three numbers every recipe is built from, plus how they were reached.
 
     Returns a dict with target_microns, temp_c, ratio, dose_g, water_g, the
@@ -89,6 +119,10 @@ def compute_targets(coffee_data, brewer, oz, history_rows, chain=None):
     chain = dialin.normalize_chain(chain)
     has_chain = any(chain.values())
     notes = []
+
+    coffee_data, assumed = resolve_roast(coffee_data, default_roast)
+    if assumed:
+        notes.append(f"Roast level unknown: assuming {coffee_data['roast']}")
 
     microns, micron_limits = _grind_target(coffee_data, brewer, oz, history_rows, chain, has_chain, notes)
     temp_c, temp_limits = _temp_target(coffee_data, brewer, chain, notes)
@@ -109,7 +143,7 @@ def compute_targets(coffee_data, brewer, oz, history_rows, chain=None):
     }
 
 
-def lever_headroom(coffee_data, brewer, oz, chain=None):
+def lever_headroom(coffee_data, brewer, oz, chain=None, default_roast=None):
     """Which dial-in moves are still open for this brewer at this chain.
 
     Returns {move: None | reason} for every move in dialin.MOVES. None means
@@ -117,7 +151,7 @@ def lever_headroom(coffee_data, brewer, oz, chain=None):
     blocks both temp moves; a value already at the brewer's limit blocks the
     move that would push past it.
     """
-    t = compute_targets(coffee_data, brewer, oz, [], chain)
+    t = compute_targets(coffee_data, brewer, oz, [], chain, default_roast)
     limits = t["limits"]
     result = {}
 

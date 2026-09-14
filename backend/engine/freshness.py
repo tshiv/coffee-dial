@@ -82,13 +82,23 @@ def _is_slow_rest(process):
     return any(token in p for token in SLOW_REST_PROCESSES)
 
 
-def ready_range(roast, process=None):
+def _fallback_roast(default_roast):
+    """The roast to assume when a bag's own roast is unreadable.
+
+    `default_roast` is the user's setting (their subscription profile); it is
+    normalized the same way a bag's roast is, and falls back to DEFAULT_ROAST
+    when unset or unrecognized.
+    """
+    return _normalize_roast(default_roast) or DEFAULT_ROAST
+
+
+def ready_range(roast, process=None, default_roast=None):
     """Days after roast when the bag should come into its window.
 
     Returns (low, high). Storage is deliberately not a parameter — it must not
     influence the rest period.
     """
-    key = _normalize_roast(roast) or DEFAULT_ROAST
+    key = _normalize_roast(roast) or _fallback_roast(default_roast)
     low, high = READY_RANGE_DAYS[key]
     if _is_slow_rest(process):
         low += SLOW_REST_BONUS_DAYS
@@ -96,9 +106,9 @@ def ready_range(roast, process=None):
     return (low, high)
 
 
-def tired_day(roast, is_decaf=False):
+def tired_day(roast, is_decaf=False, default_roast=None):
     """Day, on the sealed clock, when the bag is past its best."""
-    key = _normalize_roast(roast) or DEFAULT_ROAST
+    key = _normalize_roast(roast) or _fallback_roast(default_roast)
     days = TIRED_DAYS[key]
     if is_decaf:
         days *= DECAF_TIRED_FACTOR
@@ -158,7 +168,7 @@ def is_frozen(bag):
     return bool(bag.get("frozen_at")) and not bag.get("thawed_at")
 
 
-def compute_phase(bag, now):
+def compute_phase(bag, now, default_roast=None):
     """Full freshness read for a bag.
 
     Returns a dict that always carries `phase`. Window numbers are present only
@@ -180,8 +190,8 @@ def compute_phase(bag, now):
     assumed_roast = _normalize_roast(roast) is None
 
     age = effective_age_days(bag, now)
-    low, high = ready_range(roast, process)
-    sealed_tired = tired_day(roast, is_decaf)
+    low, high = ready_range(roast, process, default_roast)
+    sealed_tired = tired_day(roast, is_decaf, default_roast)
 
     open_age = open_age_days(bag, now)
     open_limit = open_clock_days(storage)
@@ -226,6 +236,8 @@ def compute_phase(bag, now):
         result["message"] = "In the window."
 
     if assumed_roast:
-        result["message"] += " Roast level unknown, assuming medium."
+        assumed = (str(default_roast).strip().lower()
+                   if _normalize_roast(default_roast) else DEFAULT_ROAST)
+        result["message"] += f" Roast level unknown, assuming {assumed}."
 
     return result
