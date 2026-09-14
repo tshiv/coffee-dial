@@ -36,7 +36,7 @@ from flask_cors import CORS
 
 from ai.parsing import call_ai
 from ai.recipe_search import search_roaster_recipe
-from engine.recommend import build_recommendation, lever_headroom
+from engine.recommend import build_recommendation, lever_headroom, ROAST_LEVELS
 from engine.grind import setting_to_microns
 from engine import freshness
 from engine import dialin
@@ -231,6 +231,7 @@ def get_settings():
     masked["has_anthropic_key"] = bool(s.get("anthropic_key"))
     masked["has_fellow_creds"] = bool(s.get("fellow_email") and s.get("fellow_password"))
     masked.setdefault("temp_unit", "F")
+    masked.setdefault("default_roast", freshness.DEFAULT_ROAST)
     return jsonify(masked)
 
 @app.route("/api/settings", methods=["POST"])
@@ -240,8 +241,22 @@ def post_settings():
     for k in ("openai_key", "anthropic_key", "fellow_email", "fellow_password", "ai_provider", "temp_unit"):
         if k in data and data[k] != "":
             s[k] = data[k]
+    if "default_roast" in data:
+        roast = str(data["default_roast"] or "").strip().lower()
+        if roast not in ROAST_LEVELS:
+            return jsonify({"error": f"default_roast must be one of {', '.join(ROAST_LEVELS)}"}), 400
+        s["default_roast"] = roast
     save_settings_file(s)
     return jsonify({"ok": True})
+
+
+def default_roast():
+    """The roast to assume when a bag's own is unreadable.
+
+    The user's subscription profile, in practice: someone on a light-roast
+    rotation should never have an unparsed bag treated as medium.
+    """
+    return load_settings().get("default_roast") or None
 
 
 # ─── Equipment ────────────────────────────────────────────────────────────────
@@ -365,7 +380,8 @@ def recommend():
             except LookupError as e:
                 return jsonify({"error": str(e)}), 404
 
-    rec = build_recommendation(coffee_data, grinder, brewer, oz, rows, chain=chain)
+    rec = build_recommendation(coffee_data, grinder, brewer, oz, rows, chain=chain,
+                               default_roast=default_roast())
     rec["version"] = version
     rec["parent_brew_id"] = parent_brew_id if chain is not None else None
     if adjustment is not None:
@@ -428,7 +444,7 @@ def post_history():
             bag = conn.execute("SELECT * FROM bags WHERE id = ?", (vals["bag_id"],)).fetchone()
             if bag is None:
                 return jsonify({"error": f"Bag {vals['bag_id']} not found"}), 400
-            read = freshness.compute_phase(dict(bag), vals["timestamp"] // 1000)
+            read = freshness.compute_phase(dict(bag), vals["timestamp"] // 1000, default_roast())
             vals["bag_phase"] = read["phase"]
             vals["bag_age_days"] = read.get("age_days")
             vals["bag_open_age_days"] = read.get("open_age_days")
@@ -481,7 +497,7 @@ def _bag_with_freshness(row, now=None):
     """Attach the computed freshness read to a bag row."""
     bag = dict(row)
     now = now if now is not None else int(time.time())
-    bag["freshness"] = freshness.compute_phase(bag, now)
+    bag["freshness"] = freshness.compute_phase(bag, now, default_roast())
     return bag
 
 
@@ -649,7 +665,7 @@ def rate_brew(brew_id):
         if grinder and brewer:
             response["next_recommendation"] = build_recommendation(
                 _coffee_from_brew(brew), grinder, brewer, brew["brew_oz"] or 12, [],
-                chain=next_chain,
+                chain=next_chain, default_roast=default_roast(),
             )
 
     return jsonify(response)
@@ -711,7 +727,8 @@ def _headroom_for_brew(brew):
     chain = dialin.chain_from_row(brew)
     offset, _ = _grind_used_offset(brew)
     chain["micron_delta"] += offset
-    return lever_headroom(_coffee_from_brew(brew), brewer, brew["brew_oz"] or 12, chain)
+    return lever_headroom(_coffee_from_brew(brew), brewer, brew["brew_oz"] or 12, chain,
+                          default_roast=default_roast())
 
 
 def _child_of(parent):

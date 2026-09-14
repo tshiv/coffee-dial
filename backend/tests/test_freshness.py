@@ -185,3 +185,32 @@ def test_unknown_storage_falls_back_to_default():
     assert freshness.open_clock_days("mason jar in the sun") == freshness.open_clock_days(
         freshness.DEFAULT_STORAGE
     )
+
+
+# ─── Default roast ────────────────────────────────────────────────────────────
+
+def test_default_roast_replaces_medium_for_an_unreadable_roast():
+    result = freshness.compute_phase(bag(roast="city+"), NOW, default_roast="light")
+    assert result["assumed_roast"] is True
+    assert "assuming light" in result["message"]
+    assert result["ready_range_days"] == list(freshness.READY_RANGE_DAYS["light"])
+    assert result["tired_day"] == freshness.tired_day("light")
+
+
+def test_bag_roast_wins_over_the_default():
+    result = freshness.compute_phase(bag(roast="dark"), NOW, default_roast="light")
+    assert result["assumed_roast"] is False
+    assert result["ready_range_days"] == list(freshness.READY_RANGE_DAYS["dark"])
+
+
+def test_unrecognized_default_falls_back_to_medium():
+    result = freshness.compute_phase(bag(roast=None), NOW, default_roast="espresso")
+    assert "assuming medium" in result["message"]
+    assert result["ready_range_days"] == list(freshness.READY_RANGE_DAYS["medium"])
+
+
+def test_default_roast_message_uses_the_users_wording():
+    """A medium-light default rests on the light clock but is reported as set."""
+    result = freshness.compute_phase(bag(roast=None), NOW, default_roast="medium-light")
+    assert "assuming medium-light" in result["message"]
+    assert result["ready_range_days"] == list(freshness.READY_RANGE_DAYS["light"])
