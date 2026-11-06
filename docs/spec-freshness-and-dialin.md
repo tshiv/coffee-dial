@@ -329,5 +329,5 @@ credential. It should not be scripted against or stored.
 2. A camera input in the frontend, which mobile Safari supports natively via
    `<input type="file" accept="image/*" capture="environment">`
 
-The serving side already works: the app is reachable at `http://192.168.0.57:8765`
+The serving side already works: with `COFFEE_DIAL_HOST=0.0.0.0` the app is reachable at `http://<your-computer-ip>:8765`
 on your home wifi today. Worth its own spec once these three steps land.

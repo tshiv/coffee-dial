@@ -333,3 +333,33 @@ def test_default_roast_reaches_the_recommendation_and_the_bag(client, settings_f
     assert read["assumed_roast"] is True
     assert "assuming light" in read["message"]
     assert read["ready_range_days"] == list(freshness.READY_RANGE_DAYS["light"])
+
+
+# ─── Security: secrets and cross-origin writes ────────────────────────────────
+
+def test_settings_never_return_any_part_of_a_secret(client, settings_file):
+    secret = "sk-ant-THISISASECRETVALUE1234"
+    client.post("/api/settings", json={"anthropic_key": secret, "fellow_password": "hunter2hunter2"})
+    body = client.get("/api/settings").get_data(as_text=True)
+    assert "sk-a" not in body and "1234" not in body and "hunter" not in body
+    data = client.get("/api/settings").get_json()
+    assert data["anthropic_key"] == "" and data["has_anthropic_key"] is True
+    assert data["fellow_password"] == ""
+
+
+def test_cross_origin_write_is_rejected(client, settings_file):
+    r = client.post("/api/settings", json={"temp_unit": "C"},
+                    headers={"Origin": "https://evil.example"})
+    assert r.status_code == 403
+    assert not settings_file.exists()
+
+
+def test_same_origin_and_vite_dev_writes_are_allowed(client, settings_file):
+    for origin in ("http://localhost", "http://localhost:5173"):
+        r = client.post("/api/settings", json={"temp_unit": "C"}, headers={"Origin": origin})
+        assert r.status_code == 200, origin
+
+
+def test_no_cors_headers_are_sent(client):
+    r = client.get("/api/settings", headers={"Origin": "https://evil.example"})
+    assert "Access-Control-Allow-Origin" not in r.headers
