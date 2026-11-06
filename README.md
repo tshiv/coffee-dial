@@ -88,6 +88,16 @@ python app.py
 
 The API server runs at `http://localhost:8765`.
 
+By default it only listens on this computer. Coffee Dial has no login, so
+anything that can reach the port can read your history and use your saved API
+key. Two opt-in environment variables:
+
+| Variable | Effect |
+|---|---|
+| `COFFEE_DIAL_HOST=0.0.0.0` | Listen on your home network too (e.g. to use it from your phone). Only do this on a network you trust. |
+| `COFFEE_DIAL_ALLOWED_HOSTS=my-mac.local` | Extra hostnames to accept, comma-separated. Localhost and IP addresses always work; any other name is refused, which blocks DNS-rebinding attacks from web pages. |
+| `COFFEE_DIAL_DEBUG=1` | Flask debug mode with auto-reload. Its in-browser debugger can run code on your machine, so keep it local. |
+
 ### 3. Frontend
 
 ```bash

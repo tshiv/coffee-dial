@@ -144,7 +144,7 @@ export function SettingsView({ api, equipment, theme, setTheme, onDone, onViewHi
           <input
             class={styles.input}
             type="password"
-            placeholder="sk-..."
+            placeholder={settings['has_' + (settings.ai_provider || 'anthropic') + '_key'] ? 'Saved (type to replace)' : 'sk-...'}
             value={settings[(settings.ai_provider || 'anthropic') + '_key'] || ''}
             onChange={(e) => saveSetting((settings.ai_provider || 'anthropic') + '_key', e.target.value)}
           />
@@ -225,7 +225,7 @@ export function SettingsView({ api, equipment, theme, setTheme, onDone, onViewHi
           <input
             class={styles.input}
             type="password"
-            placeholder="password"
+            placeholder={settings.has_fellow_creds ? 'Saved (type to replace)' : 'password'}
             value={settings.fellow_password || ''}
             onChange={(e) => saveSetting('fellow_password', e.target.value)}
           />

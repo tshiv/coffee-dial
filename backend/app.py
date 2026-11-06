@@ -31,8 +31,9 @@ import os
 import json
 import sqlite3
 import time
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
+import ipaddress
+from urllib.parse import urlparse
+from flask import Flask, request, jsonify, send_from_directory, abort
 
 from ai.parsing import call_ai
 from ai.recipe_search import search_roaster_recipe
@@ -48,7 +49,51 @@ from aiden import AidenClient, AidenError, AidenAuthError
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
 
 app = Flask(__name__, static_folder=os.path.join(FRONTEND_DIR, "dist"))
-CORS(app)
+
+# No CORS: the frontend is always same-origin (Flask serves frontend/dist, and
+# the Vite dev server proxies /api). Leaving CORS off means a random web page
+# open in your browser can't read this API.
+#
+# Every request must name this machine in its Host header: localhost or an IP
+# address, plus any names listed in COFFEE_DIAL_ALLOWED_HOSTS (comma-separated,
+# e.g. "my-mac.local"). That blocks DNS rebinding, where a web page points its
+# own domain at 127.0.0.1 and then talks to this API as if same-origin. Its
+# Host header still carries the attacker's domain name, never an IP literal.
+#
+# Writes are also checked against the Origin header, so a cross-site form post
+# can't change settings or history either. The Vite dev origins are allowed
+# because its proxy rewrites Host (changeOrigin) but keeps the browser's Origin.
+DEV_ORIGINS = {"localhost:5173", "127.0.0.1:5173"}
+EXTRA_HOSTS = {
+    h.strip().lower()
+    for h in os.environ.get("COFFEE_DIAL_ALLOWED_HOSTS", "").split(",")
+    if h.strip()
+}
+
+
+def host_is_allowed(netloc):
+    hostname = (urlparse("//" + netloc).hostname or "").lower()
+    if hostname == "localhost" or hostname in EXTRA_HOSTS:
+        return True
+    try:
+        ipaddress.ip_address(hostname)
+        return True
+    except ValueError:
+        return False
+
+
+@app.before_request
+def reject_foreign_requests():
+    if not host_is_allowed(request.host):
+        abort(403)
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return
+    origin = request.headers.get("Origin")
+    if origin is None:
+        return  # not a browser cross-site request (curl, tests, same-origin forms in old browsers)
+    netloc = urlparse(origin).netloc
+    if netloc != request.host and netloc not in DEV_ORIGINS:
+        abort(403)
 
 DB_PATH = os.environ.get("COFFEE_DIAL_DB", os.path.join(os.path.dirname(__file__), "coffee_dial.db"))
 SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "settings.json")
@@ -218,15 +263,15 @@ def save_settings_file(data):
     with open(SETTINGS_PATH, "w") as f:
         json.dump(data, f, indent=2)
 
+SECRET_KEYS = ("openai_key", "anthropic_key", "fellow_password")
+
+
 @app.route("/api/settings", methods=["GET"])
 def get_settings():
     s = load_settings()
-    masked = {}
-    for k, v in s.items():
-        if v and k in ("openai_key", "anthropic_key", "fellow_password"):
-            masked[k] = v[:4] + "..." + v[-4:] if len(v) > 8 else "****"
-        else:
-            masked[k] = v
+    # Secrets never leave the server, not even partially. The has_* flags
+    # below tell the UI whether one is saved.
+    masked = {k: ("" if k in SECRET_KEYS else v) for k, v in s.items()}
     masked["has_openai_key"] = bool(s.get("openai_key"))
     masked["has_anthropic_key"] = bool(s.get("anthropic_key"))
     masked["has_fellow_creds"] = bool(s.get("fellow_email") and s.get("fellow_password"))
@@ -1050,5 +1095,12 @@ def serve_static(path):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8765))
-    print(f"\n☕  Coffee Dial running at http://localhost:{port}\n")
-    app.run(host="0.0.0.0", port=port, debug=True)
+    # Localhost only by default: there is no login, so anything that can reach
+    # the port can read history and use your saved API key. To use it from a
+    # phone on your home wifi, run with COFFEE_DIAL_HOST=0.0.0.0.
+    host = os.environ.get("COFFEE_DIAL_HOST", "127.0.0.1")
+    # Flask's debugger lets the browser run Python on this machine, so it is
+    # opt-in, never on by default.
+    debug = os.environ.get("COFFEE_DIAL_DEBUG") == "1"
+    print(f"\n☕  Coffee Dial running at http://{'localhost' if host == '127.0.0.1' else host}:{port}\n")
+    app.run(host=host, port=port, debug=debug)

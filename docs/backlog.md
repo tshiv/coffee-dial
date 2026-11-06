@@ -68,8 +68,8 @@ Two pieces missing:
 2. A camera input in the frontend. Mobile Safari supports it natively:
    `<input type="file" accept="image/*" capture="environment">`
 
-The serving side already works — the Flask app binds `0.0.0.0` and is reachable
-on the LAN at `http://192.168.0.57:8765`. **No auth of any kind**, so anything
+The serving side already works — run with `COFFEE_DIAL_HOST=0.0.0.0` and it is reachable
+on the LAN at `http://<your-computer-ip>:8765`. **No auth of any kind**, so anything
 on the home network can reach it. Worth deciding whether that matters before
 leaning on it.
 

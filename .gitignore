@@ -30,3 +30,8 @@ Thumbs.db
 
 # Node (if any tooling is added later)
 node_modules/
+
+# Local agent/editor files (machine-specific paths, personal notes)
+.claude/
+.superpowers/
+CLAUDE.md
