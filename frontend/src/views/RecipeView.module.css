@@ -1,6 +1,10 @@
 .backLink {
+  font: inherit;
   font-size: 13px;
   color: var(--color-accent);
+  background: none;
+  border: none;
+  padding: 0;
   cursor: pointer;
   display: inline-block;
   margin-bottom: 16px;

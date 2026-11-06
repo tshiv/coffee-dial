@@ -171,11 +171,11 @@ All community recipes credit their original authors and link to source material.
 
 ## Fellow Aiden Integration
 
-For Fellow Aiden owners: the app can push brew profiles directly to your Aiden via the [9b/fellow-aiden](https://github.com/9b/fellow-aiden) library. Add your Fellow credentials in Settings.
+For Fellow Aiden owners: the app can push brew profiles directly to your Aiden through Fellow's account API. Add your Fellow credentials in Settings.
 
 - **Engine profiles** — push the engine's recommendation directly
-- **Community profiles** — push curated Aiden recipes (light/dark roast defaults)
-- **Brew.link imports** — import and push shared profiles from Fellow's sharing URLs
+- **Community profiles** — load a curated Aiden recipe (light/dark roast defaults) into the profile, then push it
+- **Brew.link imports** — import a shared profile from Fellow's sharing URLs, then push it
 
 ---
 
@@ -234,8 +234,8 @@ Adding a new grinder is just a JSON entry — no Python code changes needed. Add
 
 - **Frontend**: Preact + Vite + CSS Modules — component architecture with warm parchment design system, light/dark mode, brew timer
 - **Backend**: Python 3 + Flask + SQLite
-- **AI**: Anthropic Claude Haiku or OpenAI GPT-4o-mini (for bag parsing and roaster recipe search)
-- **Aiden API**: [9b/fellow-aiden](https://github.com/9b/fellow-aiden)
+- **AI**: Anthropic Claude Haiku 5.5 for bag parsing (structured outputs), Claude Opus 5.5 with web search for roaster recipes; OpenAI GPT-4o-mini as an alternative for parsing and recall-only recipe lookups
+- **Aiden API**: a minimal in-repo client (`backend/aiden/client.py`), originally based on [9b/fellow-aiden](https://github.com/9b/fellow-aiden)
 
 ---
 

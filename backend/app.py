@@ -38,7 +38,7 @@ from flask import Flask, request, jsonify, send_from_directory, abort
 from ai.parsing import call_ai
 from ai.recipe_search import search_roaster_recipe
 from engine.recommend import build_recommendation, lever_headroom, ROAST_LEVELS
-from engine.grind import setting_to_microns
+from engine.grind import setting_to_microns, one_step_micron_delta
 from engine import freshness
 from engine import dialin
 from equipment.loader import get_grinder, get_brewer, list_equipment
@@ -418,7 +418,10 @@ def recommend():
     adjustment = None
 
     with get_db() as conn:
-        rows = conn.execute("SELECT roast, rating FROM brews WHERE rating IS NOT NULL").fetchall()
+        # Newest first: the history prior only reads the latest cups.
+        rows = conn.execute(
+            "SELECT roast, rating, bag_phase FROM brews WHERE rating IS NOT NULL "
+            "ORDER BY timestamp DESC, id DESC").fetchall()
         if chain is None and parent_brew_id:
             try:
                 chain, version, adjustment, _ = _chain_for_child(conn, parent_brew_id)
@@ -782,9 +785,30 @@ def _child_of(parent):
     chain, version, adjustment = dialin.chain_for_child(
         parent, _headroom_for_brew(parent), grind_offset_microns=offset
     )
+    _widen_grind_move(parent, offset, chain, adjustment)
     if detail is not None:
         adjustment["grind_used"] = detail
     return chain, version, adjustment
+
+
+def _widen_grind_move(parent, offset, chain, adjustment):
+    """Make a grind move big enough to change the parent's grinder setting.
+
+    Mutates `chain` and `adjustment` in place. A move left at the bare micron
+    step can round back to the setting the parent already used, which spends
+    a whole brew testing nothing.
+    """
+    if adjustment.get("lever") != "grind" or not adjustment.get("delta"):
+        return
+    grinder = get_grinder(parent["grinder_id"] or "")
+    target = parent["target_microns"]
+    if grinder is None or target is None:
+        return
+    step = adjustment["delta"]
+    direction = 1 if step > 0 else -1
+    widened = one_step_micron_delta(grinder, float(target) + offset, direction, abs(step))
+    chain["micron_delta"] += widened - step
+    adjustment["delta"] = widened
 
 
 def _chain_for_child(conn, parent_brew_id):

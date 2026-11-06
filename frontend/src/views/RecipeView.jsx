@@ -38,6 +38,7 @@ export function RecipeView({
   const [roasterQuery, setRoasterQuery] = useState('');
   const [roasterResults, setRoasterResults] = useState([]);
   const [roasterSearching, setRoasterSearching] = useState(false);
+  const [roasterSearchError, setRoasterSearchError] = useState('');
   const [brewLinkUrl, setBrewLinkUrl] = useState('');
   const [brewLinkStatus, setBrewLinkStatus] = useState('idle');
   // The roaster's own recipe is looked up as soon as the view opens. It is
@@ -97,7 +98,14 @@ export function RecipeView({
   const timer = useTimer(steps);
 
   if (loading) return <div class={styles.loading}>Generating recipe...</div>;
-  if (error) return <div class={styles.error}>{error}</div>;
+  if (error) {
+    return (
+      <div>
+        <button type="button" class={styles.backLink} onClick={onBack}>&larr; Change coffee</button>
+        <p class={styles.error} role="alert">Could not build a recipe: {error}</p>
+      </div>
+    );
+  }
   if (!rec) return null;
 
   const { recipe } = rec;
@@ -128,6 +136,7 @@ export function RecipeView({
 
   const handleRoasterSearch = async () => {
     setRoasterSearching(true);
+    setRoasterSearchError('');
     try {
       const data = await apiFetch('/search-roaster-recipe', {
         method: 'POST',
@@ -137,9 +146,11 @@ export function RecipeView({
           brewer_id: brewerId,
         }),
       });
-      setRoasterResults(Array.isArray(data) ? data : []);
-    } catch {
+      // The endpoint returns one recipe, not a list.
+      setRoasterResults(data && typeof data === 'object' ? [data] : []);
+    } catch (err) {
       setRoasterResults([]);
+      setRoasterSearchError(err.message || 'Search failed');
     }
     setRoasterSearching(false);
   };
@@ -149,7 +160,7 @@ export function RecipeView({
     try {
       const data = await apiFetch('/import-brew-link', {
         method: 'POST',
-        body: JSON.stringify({ url: brewLinkUrl }),
+        body: JSON.stringify({ link: brewLinkUrl }),
       });
       useCommunityRecipe(data);
       setBrewLinkStatus('success');
@@ -195,16 +206,11 @@ export function RecipeView({
         {cr.dose_g && <span>{cr.dose_g}g</span>}
         {cr.total_time_s && <span>{formatTime(cr.total_time_s)}</span>}
       </div>
+      {/* On an Aiden this loads the recipe into the Aiden profile section,
+          whose own button does the push. */}
       <button class={styles.useBtn} onClick={() => useCommunityRecipe(cr)}>
-        Use This Recipe
+        {isAiden ? 'Use This Recipe (then push below)' : 'Use This Recipe'}
       </button>
-      {isAiden && cr.profile_name && (
-        <button class={styles.useBtn} style={{ marginLeft: 8 }} onClick={() => {
-          useCommunityRecipe(cr);
-        }}>
-          Push to Aiden
-        </button>
-      )}
     </div>
   );
 
@@ -239,7 +245,7 @@ export function RecipeView({
 
   return (
     <div>
-      <a class={styles.backLink} onClick={onBack}>&larr; Change coffee</a>
+      <button type="button" class={styles.backLink} onClick={onBack}>&larr; Change coffee</button>
 
       <h1 class={styles.coffeeName}>{coffeeData.coffee_name}</h1>
       <p class={styles.meta}>
@@ -348,6 +354,9 @@ export function RecipeView({
             {roasterSearching ? 'Searching...' : 'Search'}
           </button>
         </div>
+        {roasterSearchError && (
+          <p class={styles.provenance} style={{ color: 'var(--color-red)' }}>{roasterSearchError}</p>
+        )}
         {roasterResults.length > 0 && roasterResults.map(renderRecipeCard)}
       </div>
 
