@@ -4,6 +4,13 @@
 
 Built for coffee snobs on rotating subscriptions (e.g. [Bottomless](https://www.bottomless.com)) who want dialed-in settings for every new bag without guesswork.
 
+<p align="center">
+  <img src="docs/screenshots/bag-shelf.png" width="260" alt="Bag shelf: four bags, each marked ready, resting, or tired with days since roast and days since opening">
+  <img src="docs/screenshots/recipe.png" width="260" alt="Recipe for a light natural Ethiopian on a Fellow Ode Gen 2 and Hario V60: grind setting 15, 203°F, 21.5 g to 355 g, with timed pour steps">
+  <img src="docs/screenshots/dial-in.png" width="260" alt="After rating the cup too bitter: next brew changes one thing, grind to setting 16, with the reason">
+</p>
+<p align="center"><sub>Bag shelf · recipe for your grinder and brewer · one change after a "too bitter" rating. Sample data.</sub></p>
+
 ---
 
 ## What it does
@@ -247,7 +254,7 @@ coffee-dial/
                             # SimpleDrip, RatingRow
       views/                # SetupView, InputView, RecipeView, SettingsView,
                             # HistoryView, AidenProfilesView
-  docs/                     # Design spec and backlog
+  docs/                     # Design spec, backlog, README screenshots
 ```
 
 ## Contributing
