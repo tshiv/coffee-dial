@@ -363,3 +363,22 @@ def test_same_origin_and_vite_dev_writes_are_allowed(client, settings_file):
 def test_no_cors_headers_are_sent(client):
     r = client.get("/api/settings", headers={"Origin": "https://evil.example"})
     assert "Access-Control-Allow-Origin" not in r.headers
+
+
+def test_dns_rebinding_host_is_rejected_for_reads_and_writes(client, settings_file):
+    # A rebinding page sends its own domain as both Host and Origin.
+    h = {"Host": "evil.example:8765", "Origin": "http://evil.example:8765"}
+    assert client.get("/api/settings", headers={"Host": "evil.example:8765"}).status_code == 403
+    assert client.post("/api/settings", json={"temp_unit": "C"}, headers=h).status_code == 403
+    assert not settings_file.exists()
+
+
+def test_localhost_and_lan_ip_hosts_are_allowed(client, settings_file):
+    for host in ("localhost:8765", "127.0.0.1:8765", "192.168.1.20:8765", "[::1]:8765"):
+        assert client.get("/api/settings", headers={"Host": host}).status_code == 200, host
+
+
+def test_extra_hosts_can_be_allowed(client, settings_file, monkeypatch):
+    monkeypatch.setattr(coffee_app, "EXTRA_HOSTS", {"my-mac.local"})
+    assert client.get("/api/settings", headers={"Host": "my-mac.local:8765"}).status_code == 200
+    assert client.get("/api/settings", headers={"Host": "other.local:8765"}).status_code == 403

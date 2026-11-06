@@ -31,6 +31,7 @@ import os
 import json
 import sqlite3
 import time
+import ipaddress
 from urllib.parse import urlparse
 from flask import Flask, request, jsonify, send_from_directory, abort
 
@@ -53,14 +54,38 @@ app = Flask(__name__, static_folder=os.path.join(FRONTEND_DIR, "dist"))
 # the Vite dev server proxies /api). Leaving CORS off means a random web page
 # open in your browser can't read this API.
 #
+# Every request must name this machine in its Host header: localhost or an IP
+# address, plus any names listed in COFFEE_DIAL_ALLOWED_HOSTS (comma-separated,
+# e.g. "my-mac.local"). That blocks DNS rebinding, where a web page points its
+# own domain at 127.0.0.1 and then talks to this API as if same-origin. Its
+# Host header still carries the attacker's domain name, never an IP literal.
+#
 # Writes are also checked against the Origin header, so a cross-site form post
 # can't change settings or history either. The Vite dev origins are allowed
 # because its proxy rewrites Host (changeOrigin) but keeps the browser's Origin.
 DEV_ORIGINS = {"localhost:5173", "127.0.0.1:5173"}
+EXTRA_HOSTS = {
+    h.strip().lower()
+    for h in os.environ.get("COFFEE_DIAL_ALLOWED_HOSTS", "").split(",")
+    if h.strip()
+}
+
+
+def host_is_allowed(netloc):
+    hostname = (urlparse("//" + netloc).hostname or "").lower()
+    if hostname == "localhost" or hostname in EXTRA_HOSTS:
+        return True
+    try:
+        ipaddress.ip_address(hostname)
+        return True
+    except ValueError:
+        return False
 
 
 @app.before_request
-def reject_cross_origin_writes():
+def reject_foreign_requests():
+    if not host_is_allowed(request.host):
+        abort(403)
     if request.method in ("GET", "HEAD", "OPTIONS"):
         return
     origin = request.headers.get("Origin")
