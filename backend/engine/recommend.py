@@ -175,6 +175,67 @@ def lever_headroom(coffee_data, brewer, oz, chain=None, default_roast=None):
     return result
 
 
+# ─── History prior ────────────────────────────────────────────────────────────
+
+# How many of the latest rated cups of a roast level the prior looks at. Old
+# ratings stop counting once you have this many newer ones, so a grind you
+# have since fixed does not keep pushing every new bag.
+HISTORY_WINDOW = 20
+HISTORY_MICRON_NUDGE = 30
+
+
+def history_grind_prior(history_rows, roast):
+    """The grind nudge for a coffee with no dial-in chain yet, or None.
+
+    Reads the most recent rated cups of the same roast level. Only extraction
+    ratings vote: "flat" is a strength fault (the dial-in fixes it with the
+    ratio, not the grind), and a cup from a tired bag is not evidence about
+    the grind. "Good" cups count against moving at all, so the grind only
+    moves when most recent cups called for it.
+
+    `history_rows` must be newest first. Each row needs `roast` and `rating`;
+    `bag_phase` is optional.
+    """
+    votes = {"bitter": 0, "bright": 0, "good": 0}
+    seen = 0
+    for row in history_rows:
+        if seen >= HISTORY_WINDOW:
+            break
+        if _row_get(row, "roast") != roast:
+            continue
+        if _row_get(row, "bag_phase") == dialin.PHASE_TIRED:
+            continue
+        ratings = set(dialin.normalize_ratings(_row_get(row, "rating")))
+        if "good" in ratings:
+            vote = "good"
+        elif "bitter" in ratings and "bright" not in ratings:
+            vote = "bitter"
+        elif "bright" in ratings and "bitter" not in ratings:
+            vote = "bright"
+        else:
+            continue  # flat only, or bitter and bright cancelling
+        votes[vote] += 1
+        seen += 1
+
+    if seen == 0:
+        return None
+    if votes["bitter"] * 2 > seen:
+        return {"delta": HISTORY_MICRON_NUDGE,
+                "note": f"History: {votes['bitter']} of your last {seen} {roast} cups were bitter → coarser"}
+    if votes["bright"] * 2 > seen:
+        return {"delta": -HISTORY_MICRON_NUDGE,
+                "note": f"History: {votes['bright']} of your last {seen} {roast} cups were bright → finer"}
+    return None
+
+
+def _row_get(row, key):
+    """A field from a dict or sqlite Row, None when the column is absent."""
+    try:
+        return row[key]
+    except (KeyError, IndexError):
+        return None
+
+
 # ─── Targets ──────────────────────────────────────────────────────────────────
 
 def _grind_target(coffee_data, brewer, oz, history_rows, chain, has_chain, notes):
@@ -211,17 +272,10 @@ def _grind_target(coffee_data, brewer, oz, history_rows, chain, has_chain, notes
             notes.append("Dial-in: {} microns {}".format(
                 abs(round(delta)), "coarser" if delta > 0 else "finer"))
     else:
-        similar = [b for b in history_rows if b["roast"] == roast]
-        if similar:
-            bitter_count = sum(1 for b in similar if b["rating"] == "bitter")
-            bright_count = sum(1 for b in similar if b["rating"] == "bright")
-            flat_count = sum(1 for b in similar if b["rating"] == "flat")
-            if bitter_count > bright_count + flat_count:
-                microns += 30
-                notes.append(f"History: {bitter_count} bitter brews → coarser")
-            elif bright_count + flat_count > bitter_count:
-                microns -= 30
-                notes.append(f"History: {bright_count + flat_count} bright/flat brews → finer")
+        prior = history_grind_prior(history_rows, roast)
+        if prior:
+            microns += prior["delta"]
+            notes.append(prior["note"])
 
     grind_range = brewer.get("target_grind_microns", {"min": 300, "max": 1200})
     limits = {"min": grind_range["min"], "max": grind_range["max"], "fixed": False}

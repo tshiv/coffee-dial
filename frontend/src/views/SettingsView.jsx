@@ -51,12 +51,13 @@ export function SettingsView({ api, equipment, theme, setTheme, onDone, onViewHi
     }).catch(() => {});
   };
 
+  // One server-side delete of every brew. The history loaded here is only
+  // the latest 50, so deleting row by row left the rest behind.
   const clearHistory = async () => {
     try {
-      await Promise.all(history.map(h => api.apiFetch(`/history/${h.id}`, { method: 'DELETE' })));
+      await api.apiFetch('/history', { method: 'DELETE' });
       setHistory([]);
     } catch {
-      // partial clear — reload
       api.apiFetch('/history').then(setHistory).catch(() => {});
     }
   };

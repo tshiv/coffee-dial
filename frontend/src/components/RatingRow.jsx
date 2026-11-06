@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useState, useRef } from 'preact/hooks';
 import { fmtTemp } from '../lib/format';
 import styles from './RatingRow.module.css';
 
@@ -24,8 +24,35 @@ export function RatingRow({ brewData, apiFetch, tempUnit, onBrewAgain }) {
   // was followed; the server treats null the same way.
   const [grindUsed, setGrindUsed] = useState('');
 
+  // A ref, not state: a fast double tap fires twice before a re-render.
+  const savingRef = useRef(false);
+
+  // Rate a brew that is already saved. Changing your mind after saving
+  // re-rates the same row instead of logging a second brew, which would fork
+  // the dial-in chain.
+  const rate = async (brewId, value) => {
+    try {
+      const dialin = await apiFetch(`/brews/${brewId}/rate`, {
+        method: 'POST',
+        body: JSON.stringify({ rating: value }),
+      });
+      setResult(dialin);
+    } catch {
+      // History is safe; the next-brew suggestion just isn't available.
+    }
+  };
+
+  const pickRating = (r) => {
+    setSelected(r);
+    if (savedBrew) {
+      setResult(null);
+      rate(savedBrew.id, r.value);
+    }
+  };
+
   const handleSave = async () => {
-    if (!selected) return;
+    if (!selected || savingRef.current || savedBrew) return;
+    savingRef.current = true;
     setSaveStatus('saving');
     try {
       const parsed = parseFloat(grindUsed);
@@ -41,17 +68,11 @@ export function RatingRow({ brewData, apiFetch, tempUnit, onBrewAgain }) {
       // recorded even if the dial-in call fails.
       setSavedBrew(brew);
       setSaveStatus('saved');
-      try {
-        const dialin = await apiFetch(`/brews/${brew.id}/rate`, {
-          method: 'POST',
-          body: JSON.stringify({ rating: selected.value }),
-        });
-        setResult(dialin);
-      } catch {
-        // History is safe; the next-brew suggestion just isn't available.
-      }
+      await rate(brew.id, selected.value);
     } catch {
       setSaveStatus('idle');
+    } finally {
+      savingRef.current = false;
     }
   };
 
@@ -66,7 +87,8 @@ export function RatingRow({ brewData, apiFetch, tempUnit, onBrewAgain }) {
           <button
             key={r.value}
             class={`${styles.ratingBtn} ${selected?.value === r.value ? styles.ratingSelected : ''}`}
-            onClick={() => { setSelected(r); setSaveStatus('idle'); setResult(null); }}
+            aria-pressed={selected?.value === r.value}
+            onClick={() => pickRating(r)}
           >
             {r.label}
           </button>

@@ -148,7 +148,11 @@ function BagRow({ bag, bags, selected, expanded, onToggleExpand, onSelect }) {
             <select
               class={styles.select}
               value={bag.storage || 'vacuum'}
-              onChange={run('storage', (e) => bags.setStorage(bag.id, e.target.value))}
+              onChange={(e) => {
+                // run() builds a no-argument handler, so read the value here.
+                const storage = e.target.value;
+                run('storage', () => bags.setStorage(bag.id, storage))();
+              }}
               disabled={!!busy}
             >
               {STORAGE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}

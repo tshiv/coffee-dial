@@ -200,6 +200,36 @@ def setting_to_microns(grinder, setting):
     return None
 
 
+def one_step_micron_delta(grinder, current_microns, direction, min_microns):
+    """The micron move that changes this grinder's setting by at least one step.
+
+    The dial-in's grind move is a fixed micron step, but grinders are coarser
+    than that: an Ode Gen 1 setting is 100 microns wide, so a 30 micron move
+    usually rounds back to the setting you already used, and "go coarser"
+    hands you the same number. This returns a move of at least
+    `min_microns` that lands on the next setting in `direction` (+1 coarser,
+    -1 finer), measured from `current_microns`.
+
+    Falls back to `min_microns` when the grinder is already at its end stop
+    in that direction or has no micron data, so the caller's clamp and notes
+    still apply.
+    """
+    fallback = direction * min_microns
+    settings = grinder.get("settings") or {}
+    current = microns_to_setting(grinder, current_microns)
+    step = settings.get("step", 1)
+    nxt = current + direction * step
+    if nxt < settings.get("min", nxt) or nxt > settings.get("max", nxt):
+        return fallback
+    nxt_microns = setting_to_microns(grinder, nxt)
+    if nxt_microns is None:
+        return fallback
+    needed = nxt_microns - current_microns
+    if needed * direction <= 0:
+        return fallback
+    return direction * max(min_microns, abs(needed))
+
+
 def format_grind_setting(grinder, setting):
     """Format a grind setting for display (e.g., 'Setting 4' or '26 clicks')."""
     unit = grinder["settings"]["unit"]

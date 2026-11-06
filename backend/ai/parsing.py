@@ -28,17 +28,61 @@ Rules:
 - Bottomless subscriptions default to specialty/light-medium unless stated otherwise
 - Natural process coffees are slightly more soluble than washed; account for this in your reasoning
 - Be conservative — if uncertain between light and medium-light, say medium-light
+- Set roast to null only when there is nothing at all to infer it from; the app then uses the brewer's default roast
 - Always return valid JSON, nothing else"""
 
+ROAST_VALUES = ["light", "medium-light", "medium", "medium-dark", "dark"]
+PROCESS_VALUES = ["washed", "natural", "honey", "anaerobic", "wet-hulled", "other"]
 
-def call_ai_with_prompt(user_prompt, system_prompt, settings):
-    """Generic AI call with a custom system prompt. Returns (parsed_json, error_string)."""
+
+def _nullable(schema):
+    return {"anyOf": [schema, {"type": "null"}]}
+
+
+# The bag-parse answer, enforced by the API on the Anthropic path (structured
+# outputs), so roast and process always come back in the engine's vocabulary
+# and the reply is always parseable JSON.
+BAG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "coffee_name": {"type": "string"},
+        "roaster": _nullable({"type": "string"}),
+        "origin": _nullable({"type": "string"}),
+        "process": _nullable({"type": "string", "enum": PROCESS_VALUES}),
+        "roast": _nullable({"type": "string", "enum": ROAST_VALUES}),
+        "altitude_m": _nullable({"type": "number"}),
+        "variety": _nullable({"type": "string"}),
+        "flavor_notes": {"type": "array", "items": {"type": "string"}},
+        "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
+        "reasoning": {"type": "string"},
+    },
+    "required": ["coffee_name", "roaster", "origin", "process", "roast", "altitude_m",
+                 "variety", "flavor_notes", "confidence", "reasoning"],
+    "additionalProperties": False,
+}
+
+# Bag parsing and recall-only recipe lookups. Claude Haiku 5.5 is a tenth of
+# Haiku 4.5's price for prompts this size. It thinks by default; this is
+# extraction, so low effort keeps that short.
+PARSE_MODEL = "claude-haiku-5-5"
+PARSE_EFFORT = "low"
+# Room for thinking as well as the answer: thinking counts against max_tokens.
+PARSE_MAX_TOKENS = 4096
+PARSE_TIMEOUT_S = 30
+
+
+def call_ai_with_prompt(user_prompt, system_prompt, settings, schema=None):
+    """Generic AI call with a custom system prompt. Returns (parsed_json, error_string).
+
+    `schema` is a JSON schema the Anthropic path enforces with structured
+    outputs. The OpenAI path ignores it and relies on JSON mode.
+    """
     provider = settings.get("ai_provider", "anthropic")
 
     if provider == "openai" and settings.get("openai_key"):
         return _call_openai(user_prompt, settings["openai_key"], system_prompt)
     elif settings.get("anthropic_key"):
-        return _call_anthropic(user_prompt, settings["anthropic_key"], system_prompt)
+        return _call_anthropic(user_prompt, settings["anthropic_key"], system_prompt, schema)
     elif settings.get("openai_key"):
         return _call_openai(user_prompt, settings["openai_key"], system_prompt)
     else:
@@ -47,41 +91,52 @@ def call_ai_with_prompt(user_prompt, system_prompt, settings):
 
 def call_ai(prompt, settings):
     """Parse coffee bag text using the coffee parsing system prompt."""
-    return call_ai_with_prompt(prompt, SYSTEM_PROMPT, settings)
+    return call_ai_with_prompt(prompt, SYSTEM_PROMPT, settings, schema=BAG_SCHEMA)
 
 
-def _call_anthropic(prompt, api_key, system_prompt=SYSTEM_PROMPT):
+def _call_anthropic(prompt, api_key, system_prompt=SYSTEM_PROMPT, schema=None):
+    output_config = {"effort": PARSE_EFFORT}
+    if schema is not None:
+        output_config["format"] = {"type": "json_schema", "schema": schema}
     try:
-        payload = json.dumps({
-            "model": "claude-haiku-4-5-20251001",
-            "max_tokens": 1024,
+        data = _post_anthropic({
+            "model": PARSE_MODEL,
+            "max_tokens": PARSE_MAX_TOKENS,
             "system": system_prompt,
-            "messages": [{"role": "user", "content": prompt}]
-        }).encode()
-
-        req = urllib.request.Request(
-            "https://api.anthropic.com/v1/messages",
-            data=payload,
-            headers={
-                "x-api-key": api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            },
-            method="POST"
-        )
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            data = json.loads(resp.read())
-            text = data["content"][0]["text"].strip()
-            text = re.sub(r'^```json\s*', '', text)
-            text = re.sub(r'\s*```$', '', text)
-            return json.loads(text), None
+            "output_config": output_config,
+            "messages": [{"role": "user", "content": prompt}],
+        }, api_key, PARSE_TIMEOUT_S)
     except Exception as e:
         return None, f"Anthropic API error: {str(e)}"
+    return _json_from_response(data)
+
+
+def _json_from_response(data):
+    """(parsed_json, error) from a Messages API response body.
+
+    Reads text blocks by type, not position: current models can open a
+    response with thinking blocks, so content[0] is not the answer.
+    """
+    stop = data.get("stop_reason")
+    if stop == "refusal":
+        return None, "The model declined this request."
+    if stop == "max_tokens":
+        return None, "The model ran out of room before finishing its answer."
+    text = "".join(
+        b.get("text", "") for b in data.get("content") or [] if b.get("type") == "text"
+    )
+    parsed = extract_json_object(text)
+    if parsed is None:
+        return None, "The model's reply was not the expected JSON."
+    return parsed, None
 
 
 # ─── Web-search-backed calls ─────────────────────────────────────────────────
 
-WEB_SEARCH_MODEL = "claude-opus-5"
+# Claude Opus 5.5: same tools and request shape as Opus 5 at a lower price.
+# Its effort default is medium, one level below Opus 5's; WEB_SEARCH_EFFORT
+# below sets it explicitly either way.
+WEB_SEARCH_MODEL = "claude-opus-5-5"
 WEB_SEARCH_TOOLS = [
     {"type": "web_search_20260209", "name": "web_search", "max_uses": 4},
     {"type": "web_fetch_20260209", "name": "web_fetch", "max_uses": 3},

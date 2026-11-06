@@ -126,7 +126,12 @@ export function App() {
           equipment={eq}
           theme={theme}
           setTheme={setTheme}
-          onDone={() => setView(previousView)}
+          onDone={() => {
+            // History may have been cleared here; reload so no bag still
+            // offers to continue from a brew that no longer exists.
+            bags.load();
+            setView(previousView);
+          }}
           onViewHistory={() => navigate('history')}
           onViewAidenProfiles={() => navigate('aidenProfiles')}
         />

@@ -382,3 +382,23 @@ def test_extra_hosts_can_be_allowed(client, settings_file, monkeypatch):
     monkeypatch.setattr(coffee_app, "EXTRA_HOSTS", {"my-mac.local"})
     assert client.get("/api/settings", headers={"Host": "my-mac.local:8765"}).status_code == 200
     assert client.get("/api/settings", headers={"Host": "other.local:8765"}).status_code == 403
+
+
+# ─── A grind move always changes the grinder setting ─────────────────────────
+
+def test_bitter_on_an_ode_gen1_moves_one_whole_setting(client):
+    """A 30 micron move used to round back to the same Ode Gen 1 setting, so
+    'go coarser' handed back the number you had just used."""
+    base = recommend(client, coffee_data=MEDIUM_HONEY, grinder_id=ODE1["grinder_id"])
+    v1 = log_brew(client, **MEDIUM_HONEY, **ODE1, grind=base["grinder_setting"],
+                  grinder_setting_display=base["grinder_display"],
+                  target_microns=base["target_microns"])
+    r = client.post(f"/api/brews/{v1['id']}/rate", json={"rating": "bitter"}).get_json()
+    assert r["adjustment"]["lever"] == "grind"
+    assert r["next_recommendation"]["grinder_setting"] == base["grinder_setting"] + 1
+
+    v2 = recommend(client, coffee_data=MEDIUM_HONEY, grinder_id=ODE1["grinder_id"],
+                   parent_brew_id=v1["id"])
+    assert v2["grinder_setting"] == base["grinder_setting"] + 1
+    logged = log_brew(client, **MEDIUM_HONEY, **ODE1, parent_brew_id=v1["id"])
+    assert logged["chain_micron_delta"] == v2["chain"]["micron_delta"]

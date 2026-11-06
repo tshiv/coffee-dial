@@ -142,3 +142,45 @@ def test_headroom_honours_the_default_roast():
     medium = lever_headroom({"origin": "Ethiopia"}, AIDEN, 12)
     assert light == lever_headroom({**COFFEE, "roast": "light"}, AIDEN, 12)
     assert medium == lever_headroom({**COFFEE, "roast": "medium"}, AIDEN, 12)
+
+
+# ─── History prior (coffees with no dial-in chain yet) ────────────────────────
+
+from engine.recommend import history_grind_prior, HISTORY_WINDOW  # noqa: E402
+
+
+def _cups(*ratings, roast="light", phase=None):
+    return [{"roast": roast, "rating": r, "bag_phase": phase} for r in ratings]
+
+
+def test_prior_counts_good_cups_against_moving():
+    """Ten good cups and two bitter ones used to push the grind coarser."""
+    assert history_grind_prior(_cups(*["good"] * 10, "bitter", "bitter", "bright"), "light") is None
+
+
+def test_prior_moves_when_most_cups_agree():
+    assert history_grind_prior(_cups("bitter", "bitter", "good"), "light")["delta"] == 30
+    assert history_grind_prior(_cups("bright", "bright", "good"), "light")["delta"] == -30
+
+
+def test_prior_ignores_flat_which_is_a_ratio_fault():
+    """The dial-in fixes flat with the ratio; the prior used to grind finer for it."""
+    assert history_grind_prior(_cups("flat", "flat", "flat"), "light") is None
+
+
+def test_prior_ignores_cups_from_tired_bags():
+    assert history_grind_prior(_cups("bitter", "bitter", phase="tired"), "light") is None
+
+
+def test_prior_reads_comma_joined_ratings():
+    """'bitter,flat' never matched the old exact comparison."""
+    assert history_grind_prior(_cups("bitter,flat", "bitter,flat"), "light")["delta"] == 30
+
+
+def test_prior_only_counts_the_same_roast():
+    assert history_grind_prior(_cups("bitter", "bitter", roast="dark"), "light") is None
+
+
+def test_prior_forgets_cups_older_than_the_window():
+    newest_first = _cups(*["good"] * HISTORY_WINDOW) + _cups(*["bitter"] * 50)
+    assert history_grind_prior(newest_first, "light") is None
