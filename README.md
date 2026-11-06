@@ -10,11 +10,12 @@ Built for coffee snobs on rotating subscriptions (e.g. [Bottomless](https://www.
 
 1. **Search or paste** your coffee bag info — coffee name, bag text, Bottomless description, anything
 2. **AI parses** roast level, origin, processing method, and flavor notes (Anthropic or OpenAI)
-3. **Pick your equipment** — grinder + brewer from the catalog
-4. **Tell it how much** — just ounces, the engine computes dose and ratio
-5. **Get a complete recipe** — grind setting for your specific grinder + method-specific brew instructions
-6. **Browse community recipes** — see matching recipes from Hoffmann, Rao, Kasuya, and others alongside the engine's recommendation
-7. **Rate the cup** → app adjusts future recommendations based on your history
+3. **Shelve the bag** with its roast date — the app tracks when it's still resting, ready, or past its best
+4. **Pick your equipment** — grinder + brewer from the catalog
+5. **Tell it how much** — just ounces, the engine computes dose and ratio
+6. **Get a complete recipe** — grind setting for your specific grinder + method-specific brew instructions
+7. **Browse community recipes** — matching recipes from Hoffmann, Rao, Kasuya, and others, plus the roaster's own published recipe when it can find one
+8. **Rate the cup** — good, bright, flat, or bitter — and the next recipe for that bag changes one thing to fix it
 
 ---
 
@@ -55,9 +56,31 @@ Every grinder produces a particle size in microns. Every brewer has an ideal mic
 3. **Translates** the target to your grinder's specific setting via interpolation
 4. **Generates a recipe** appropriate for your brewer (step-by-step pour-over, steep time, Aiden profile, etc.)
 
-### Brew history learning
+### Dialing in, one change at a time
 
-After rating a few cups, the app adapts. If you consistently rate light Ethiopian coffees as too bitter, it nudges the grind coarser for your next one. Learning happens in micron-space, so feedback transfers even if you switch grinders.
+Each rating moves exactly one variable, and the recipe says which one and why:
+
+| Rating | Means | First move | If that's blocked |
+|---|---|---|---|
+| Bitter | Over-extracted | One grind setting coarser | A little cooler |
+| Bright / sour | Under-extracted | A little hotter | One grind setting finer |
+| Flat | Weak | Stronger ratio | — |
+| Good | Dialed in | Nothing changes | — |
+
+A grind move always lands on a different number on your dial, even on coarse-stepped grinders like the Ode Gen 1. "Blocked" means the brewer can't make that move: a fixed-temperature machine has no temperature lever, and an Aiden already at 99°C can't go hotter. Changes build on each other cup by cup, so the third cup of a coffee starts from where the second left off. If you ground at a different setting than the one recommended, log it and the next recipe starts from what you actually used.
+
+### Freshness
+
+Each bag on the shelf runs two clocks, and whichever runs out first wins:
+
+- **Since roast:** light roasts rest about 10–20 days, medium 5–12, dark 2–5 (natural and anaerobic coffees get 3 extra days). A sealed bag goes tired around day 42 (light), 30 (medium), or 21 (dark); decaf sooner.
+- **Since opening:** about three weeks, longer in a vacuum canister and shorter in the bag it came in.
+
+Freezing pauses both clocks. Freshness also shapes the dial-in: a cup rated while the bag is still resting is flagged as a moving target, and "flat" from a tired bag changes nothing, since that's what stale coffee tastes like.
+
+### Learning from your history
+
+A new coffee with no ratings yet starts from your history with that roast level. If most of your last 20 rated cups of light roasts came out bitter, the next light roast starts a notch coarser; mostly bright, a notch finer. Good cups count against moving, and cups from tired bags are ignored. Adjustments happen in microns, so they carry over if you switch grinders.
 
 ### Micron values are approximate
 
@@ -157,7 +180,7 @@ Hoffmann V60/French Press/AeroPress, Kasuya 4:6, Rao V60, Adler AeroPress, Cheme
 
 ### AI roaster search
 
-Type a roaster and coffee name to search for roaster-specific brew recommendations via AI. Results show a confidence badge (high/medium/low) and are scaled to your brew size.
+For a bag with a roaster, Coffee Dial searches the web (Claude with web search) for that roaster's own published recipe for your brewer. Results link to the source page (flagged if the search never actually opened it), show a confidence badge (high/medium/low) with the reason, and are scaled to your brew size. Each lookup is cached for 30 days. Searches take up to a minute or two and need an Anthropic key; with only an OpenAI key, the lookup falls back to what the model remembers.
 
 ### Brew.link import (Aiden)
 
@@ -176,6 +199,9 @@ For Fellow Aiden owners: the app can push brew profiles directly to your Aiden t
 - **Engine profiles** — push the engine's recommendation directly
 - **Community profiles** — load a curated Aiden recipe (light/dark roast defaults) into the profile, then push it
 - **Brew.link imports** — import a shared profile from Fellow's sharing URLs, then push it
+- **Profiles on your brewer** — browse the profiles already saved on your Aiden
+
+This uses Fellow's private, undocumented account API, not a public one. It can change or break without notice.
 
 ---
 
@@ -188,9 +214,13 @@ coffee-dial/
     ai/
       parsing.py            # AI provider integration
       recipe_search.py      # AI-powered roaster recipe search
+    aiden/
+      client.py             # Minimal Fellow Aiden account API client
     engine/
       recommend.py          # Recommendation pipeline
       grind.py              # Micron targeting + grinder translation
+      dialin.py             # One-change-per-rating dial-in chain
+      freshness.py          # Resting / ready / tired phases per bag
       recipes.py            # Recipe builders per brew method
     equipment/
       grinders.json         # Grinder catalog (add yours here!)
@@ -200,6 +230,7 @@ coffee-dial/
       recipes.json          # Curated community recipes (add yours!)
       loader.py             # Recipe search + scaling
       brewlink.py           # Fellow brew.link import
+    tests/                  # pytest suite (pip install -r requirements-dev.txt)
   frontend/
     package.json            # Preact + Vite
     vite.config.js          # Dev server + API proxy
@@ -208,14 +239,15 @@ coffee-dial/
       main.jsx              # App entry
       app.jsx               # Root component + view routing
       theme/                # CSS custom properties, light/dark modes
-      hooks/                # useApi, useEquipment, useTheme, useTimer
-      lib/                  # Format helpers (temp, time)
-      components/           # Header, CoffeeSearch, CoffeeIdentity,
-                            # SizePicker, RecipeCard, AidenProfile,
-                            # PourOverSteps, BrewTimer, SimpleDrip,
-                            # RatingRow
-      views/                # SetupView, InputView, RecipeView,
-                            # SettingsView, HistoryView
+      hooks/                # useApi, useBags, useEquipment, useTheme, useTimer
+      lib/                  # Format and freshness helpers
+      components/           # Header, CoffeeSearch, CoffeeIdentity, BagForm,
+                            # BagShelf, FreshnessLine, SizePicker, RecipeCard,
+                            # AidenProfile, PourOverSteps, BrewTimer,
+                            # SimpleDrip, RatingRow
+      views/                # SetupView, InputView, RecipeView, SettingsView,
+                            # HistoryView, AidenProfilesView
+  docs/                     # Design spec and backlog
 ```
 
 ## Contributing
